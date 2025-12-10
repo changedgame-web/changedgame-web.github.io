@@ -56,7 +56,7 @@ Window_SavefileList.prototype.select = function(index) {
     this.ensureCursorVisible();
     this.updateCursor();
     this.callUpdateHelp();
-    console.log("Select called");
+    //console.log("Select called");
 
     //call info load from parent
     if(this.parentRef) {
@@ -87,7 +87,7 @@ Window_SavefileList.prototype.drawItem = function(index) {
     this.drawFileId(id, rect.x, rect.y);
 
 
-    console.log("DrawItem called");
+    //console.log("DrawItem called");
 
 };
 
@@ -167,7 +167,7 @@ Window_SaveInfo.prototype.showSaveInfo = function(index) {
     var valid = DataManager.isThisGameFile(id);
     var info = DataManager.loadSavefileInfo(id);
 
-    console.log(index);
+    //console.log(index);
 
     if (!valid) {
 
@@ -183,51 +183,61 @@ Window_SaveInfo.prototype.showSaveInfo = function(index) {
 
 
 
-    var json = StorageManager.load(id);
-    var sParsed = JSON.parse(json);
+    //var json = StorageManager.load(id);
+    //var sParsed = JSON.parse(json);
+    var context = this;
+    var imageID = id + "_thumbnail";
 
-    //extra 36 off the true width? (is this 6 * context padding? what is this constant?)
-    var contextWidth = this.width - 36;
-    var contextHeight = this.height - 36;
+    //async image load
+    StorageManager.loadAlt(imageID, function(screenshot) {
 
-    //if screenshot file exists, load it. if not, put empty thumbnail
-    if(sParsed.screenshot) {
+        //extra 36 off the true width? (is this 6 * context padding? what is this constant?)
+        var contextWidth = context.width - 36;
+        var contextHeight = context.height - 36;
 
-        var loadedBitmap = Bitmap.load(sParsed.screenshot);
-        var context = this;
+        //if screenshot file exists, load it. if not, put empty thumbnail
+        if(screenshot) {
 
-        //async bitmap loading, so we have to load it in with a callback
-        loadedBitmap.addLoadListener(function() {
-            console.log("bitmap Loaded");
+            var loadedBitmap = Bitmap.load(screenshot);
+
+            //async bitmap loading, so we have to load it in with a callback
+            loadedBitmap.addLoadListener(function() {
+                //console.log("bitmap Loaded");
+                
+
+                var drawX = (contextWidth - loadedBitmap.width) / 2;
+                var drawY = 6;
+
+                //draw shadow
+                context.contents.fillRect(drawX + 5, drawY + 5, loadedBitmap.width, loadedBitmap.height, "rgba(0, 0, 64, 1)")
+                //draw loaded bitmap
+                context.contents.blt(loadedBitmap, 0, 0, loadedBitmap.width, loadedBitmap.height, drawX, drawY);            
+
+                //context.drawPartyCharacters(info, 288, 444);
+                context.drawPartyCharacters(info, contextWidth / 2, contextHeight - 40);
             
+                context.drawPlaytime(info, 0, contextHeight - context.lineHeight(), contextWidth);
+                //context.drawPlaytime(info, 300, context.height, 200);
+            
+            }) 
 
-            var drawX = (contextWidth - loadedBitmap.width) / 2;
-            var drawY = 6;
+        } else {
 
-            //draw shadow
-            context.contents.fillRect(drawX + 5, drawY + 5, loadedBitmap.width, loadedBitmap.height, "rgba(0, 0, 64, 1)")
-            //draw loaded bitmap
-            context.contents.blt(loadedBitmap, 0, 0, loadedBitmap.width, loadedBitmap.height, drawX, drawY);            
-
-            //context.drawPartyCharacters(info, 288, 444);
-            context.drawPartyCharacters(info, contextWidth / 2, contextHeight - 40);
-        
+            context.drawText("Can't find screenshots!", 0, 168, contextWidth, 'center');
+            //this.drawPartyCharacters(info, 288, 444);
+            //this.drawPlaytime(info, 300, 400, 200);
             context.drawPlaytime(info, 0, contextHeight - context.lineHeight(), contextWidth);
-            //context.drawPlaytime(info, 300, context.height, 200);
-        
-        }) 
+            
+            //relative to window's top left corner
+            context.drawPartyCharacters(info, contextWidth / 2, contextHeight - 40);
 
-    } else {
+        }
 
-        this.drawText("Can't find screenshots!", 0, 168, contextWidth, 'center');
-        //this.drawPartyCharacters(info, 288, 444);
-        //this.drawPlaytime(info, 300, 400, 200);
-        this.drawPlaytime(info, 0, contextHeight - this.lineHeight(), contextWidth);
-        
-        //relative to window's top left corner
-        this.drawPartyCharacters(info, contextWidth / 2, contextHeight - 40);
 
-    }
+    })
+
+
+
 
 }
 
@@ -589,13 +599,30 @@ Bitmap.prototype.imageResize = function(newWidth, newHeight) {
 
 Scene_Map.prototype.terminate = function() {
     
-    console.log("Scene_Map terminated");
+    //console.log("Scene_Map terminated");
     //take screenshot
     var sceneCanvas = SceneManager.snap();
-    sceneCanvas.imageResize(489, 374); //original dimensions scaled by 1.5
+    
     if(sceneCanvas._canvas) {
-        console.log("saved");
-        $gameScreenshot = sceneCanvas._canvas.toDataURL('image/png');
+        //console.log("saved");
+        //$gameScreenshot = sceneCanvas._canvas.toDataURL('image/png');
+    
+
+        //we have <5mb of local website storage, we should probably do everything we can to reduce these.
+        //or we should (and will) use localDB to store screenshots
+        // return Utils.isNwjs()
+        // if(StorageManager.isLocalMode()) {
+        if(true) {
+            //original dimensions from Save.rb scaled by 1.5
+            sceneCanvas.imageResize(489, 374);
+            $gameScreenshot = sceneCanvas._canvas.toDataURL('image/png');
+        } else {
+            //how much smaller are JPGs? should we even attempt to use them?
+            sceneCanvas.imageResize(489, 374);
+            $gameScreenshot = sceneCanvas._canvas.toDataURL('image/jpeg', 0.4);
+        }
+
+
     } else {
         $gameScreenshot = null;
     }
@@ -650,7 +677,33 @@ DataManager.makeSaveContents = function() {
     contents.party        = $gameParty;
     contents.map          = $gameMap;
     contents.player       = $gamePlayer;
-    contents.screenshot = $gameScreenshot;
+    
+    //moved to different storage API
+    //contents.screenshot = $gameScreenshot;
     return contents;
 };
+
+
+//alteration: added image saving
+DataManager.saveGameWithoutRescue = function(savefileId) {
+    var json = JsonEx.stringify(this.makeSaveContents());
+    if (json.length >= 200000) {
+        console.warn('Save data too big!');
+    }
+    StorageManager.save(savefileId, json);
+    this._lastAccessedId = savefileId;
+    var globalInfo = this.loadGlobalInfo() || [];
+    globalInfo[savefileId] = this.makeSavefileInfo();
+    this.saveGlobalInfo(globalInfo);
+
+    //save image
+    var imageID = savefileId + "_thumbnail";
+    StorageManager.saveAlt(imageID, $gameScreenshot);
+
+    return true;
+};
+
+
+
+
 

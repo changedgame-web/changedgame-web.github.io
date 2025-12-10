@@ -80,7 +80,10 @@ Window_TitleCommand.prototype.makeCommandList = function() {
 
     //add menu strings to main menu
     this.addCommand(s4,   'lang');
-    this.addCommand(s5,   'options'); //'dlc');
+    this.addCommand(s5,   'dlc');
+    //this.addCommand(TextManager.options,   'options');
+    this.addCommand("OPTIONS",   'options');
+
     this.addCommand(s6,   'guide');
 
 };
@@ -100,13 +103,17 @@ Scene_Title.prototype.commandGuide = function() {
     this._commandWindow.close();
     SceneManager.push(Scene_Guide);
 
-    console.log("Guide");
+   // console.log("Guide");
 
 };
 
 Scene_Title.prototype.commandDlc = function() {
     this._commandWindow.close();
-    SceneManager.push(Scene_Guide);
+    
+    //convention special
+    //SceneManager.push(Scene_PostMessage);
+
+    SceneManager.push(Scene_Options);
 
     console.log("Dlc");
 };
@@ -114,7 +121,7 @@ Scene_Title.prototype.commandDlc = function() {
 Scene_Title.prototype.commandLang = function() {
     this._commandWindow.close();
     SceneManager.push(Scene_Lang);
-    console.log("Lang");
+    //console.log("Lang");
 };
 
 Scene_Title.prototype.commandQuit = function() {
@@ -212,7 +219,7 @@ Window_Lang.prototype.makeCommandList = function() {
     this.addCommand("ไทย", '9');
     this.addCommand("FRANÇAIS", '10');
 
-    console.log("MakeCommandList");
+    //console.log("MakeCommandList");
 }
 Window_Lang.prototype.changeValue = function(symbol, value) {}
 Window_Lang.prototype.cursorRight = function(wrap) {}
@@ -240,7 +247,7 @@ Window_Lang.prototype.processOk = function() {
     SoundManager.playOk();
 
     this.close();
-    console.log(lang_str);
+    //console.log(lang_str);
 
 };
 
@@ -287,9 +294,19 @@ Scene_Lang.prototype.createCommandWindow = function() {
 
 Scene_Lang.prototype.exitLang = function() {
 
+
+
     //re-call the database, this time with new language
     if(this._old_lang_str != lang_str) {
-        DataManager.loadDatabase();
+        
+        //the problem is that it tries to use the global datafiles before the server gives them to us.
+        //we can fix this by returning before popping the scene, and adding a callback counter to only pop the scene once all the data has been populated
+
+        //for now, bodge: just refresh the page on lang change exit
+        window.location.reload();
+        return;
+    
+        DataManager.loadDatabase(); //note: makes dataSystem NULL, we need to fix this.
     }
 
 
@@ -433,19 +450,254 @@ end
 
 
 
-////////////////////////////TEST
+////////////////////////////Window_Options extension
+
+//new setting, default to true for mobile devices
+ConfigManager.showOnscreenControls = Utils.isMobileDevice();
+
+//Utils.isMobileDevice
+
+//save settings
+ConfigManager.makeData = function() {
+    var config = {};
+    config.alwaysDash = this.alwaysDash;
+    config.commandRemember = this.commandRemember;
+    config.bgmVolume = this.bgmVolume;
+    config.bgsVolume = this.bgsVolume;
+    config.meVolume = this.meVolume;
+    config.seVolume = this.seVolume;
+    config.showOnscreenControls = this.showOnscreenControls;
+    return config;
+};
+
+//load settings
+ConfigManager.applyData = function(config) {
+    this.alwaysDash = this.readFlag(config, 'alwaysDash');
+    this.commandRemember = this.readFlag(config, 'commandRemember');
+    this.bgmVolume = this.readVolume(config, 'bgmVolume');
+    this.bgsVolume = this.readVolume(config, 'bgsVolume');
+    this.meVolume = this.readVolume(config, 'meVolume');
+    this.seVolume = this.readVolume(config, 'seVolume');
+    
+    //if this one doesn't exist, then we just leave it at default (determined by the initializer above)
+    if(config['showOnscreenControls'] != null) {
+        this.showOnscreenControls = this.readFlag(config, 'showOnscreenControls');
+    }
+    
+};
 
 
-console.log(Scene_Guide);
-console.log(Scene_Gameover);
+
+
+Window_Options.prototype.addGeneralOptions = function() {
+    this.addCommand(TextManager.alwaysDash, 'alwaysDash');
+    this.addCommand(TextManager.commandRemember, 'commandRemember');
+
+    this.addCommand("Show onscreen controls", 'showOnscreenControls');
+
+
+};
 
 
 
+Window_Options.prototype.getConfigValue = function(symbol) {
+    return ConfigManager[symbol];
+};
+
+Window_Options.prototype.setConfigValue = function(symbol, volume) {
+    ConfigManager[symbol] = volume;
+};
 
 
 
+/////////////////////////////Scene_PostMessage
+//special message scene for printing text on the thermal printer, backpack exclusive
+
+function Scene_PostMessage() {
+    this.initialize.apply(this, arguments);
+}
+
+Scene_PostMessage.prototype = Object.create(Scene_MenuBase.prototype);
+Scene_PostMessage.prototype.constructor = Scene_PostMessage;
+
+Scene_PostMessage.prototype.initialize = function() {
+    Scene_MenuBase.prototype.initialize.call(this);
+};
+
+Scene_PostMessage.prototype.create = function() {
+    Scene_MenuBase.prototype.create.call(this);
+    //this._actor = $gameActors.actor(this._actorId);
+    this.createEditWindow();
+    this.createInputWindow();
+};
+
+Scene_PostMessage.prototype.start = function() {
+    Scene_MenuBase.prototype.start.call(this);
+    this._editWindow.refresh();
+};
+
+Scene_PostMessage.prototype.createEditWindow = function() {
+    this._editWindow = new Window_PostMessage(75, 25);
+    this.addWindow(this._editWindow);
+};
+
+Scene_PostMessage.prototype.createInputWindow = function() {
+    this._inputWindow = new Window_NameInput(this._editWindow);
+    this._inputWindow.setHandler('ok', this.onInputOk.bind(this));
+    this.addWindow(this._inputWindow);
+};
+
+//on close, send a message
+Scene_PostMessage.prototype.onInputOk = function() {
+    //this._actor.setName(this._editWindow.name());
+    outgoing = this._editWindow.name() + "\n";
 
 
+    fetch(`/printer`, {
+        method: "POST",
+        // headers: {
+        //     "Content-Type": "application/json",
+        //     "Content-Length": outgoing.length
+        // },
+        body: JSON.stringify({ text: outgoing })
+    })
+    //.then(response => response.json())
+    //.then(data => console.log(data));
+    
 
+    
+    this.popScene();
+};
+
+
+/////////////////////////////Window_PostMessage
+function Window_PostMessage() {
+    this.initialize.apply(this, arguments);
+}
+
+Window_PostMessage.prototype = Object.create(Window_Base.prototype);
+Window_PostMessage.prototype.constructor = Window_PostMessage;
+
+Window_PostMessage.prototype.initialize = function(maxLength, lineLength) {
+    var width = this.windowWidth();
+    var height = this.windowHeight();
+    var x = (Graphics.boxWidth - width) / 2;
+    var y = (Graphics.boxHeight - (height + this.fittingHeight(9) + 8)) / 2;
+    Window_Base.prototype.initialize.call(this, x, y, width, height);
+    //this._actor = actor;
+    this._name = ""; //actor.name().slice(0, this._maxLength);
+    this._index = this._name.length;
+    this._maxLength = maxLength;
+    this._lineLength = lineLength;
+    this._defaultName = this._name;
+    this.deactivate();
+    this.refresh();
+    //ImageManager.reserveFace(actor.faceName());
+};
+
+Window_PostMessage.prototype.windowWidth = function() {
+    return 480;
+};
+
+Window_PostMessage.prototype.windowHeight = function() {
+    return this.fittingHeight(4);
+};
+
+Window_PostMessage.prototype.name = function() {
+    return this._name;
+};
+
+Window_PostMessage.prototype.restoreDefault = function() {
+    this._name = this._defaultName;
+    this._index = this._name.length;
+    this.refresh();
+    return this._name.length > 0;
+};
+
+Window_PostMessage.prototype.add = function(ch) {
+    if (this._index < this._maxLength) {
+        this._name += ch;
+        this._index++;
+        this.refresh();
+        return true;
+    } else {
+        return false;
+    }
+};
+
+Window_PostMessage.prototype.back = function() {
+    if (this._index > 0) {
+        this._index--;
+        this._name = this._name.slice(0, this._index);
+        this.refresh();
+        return true;
+    } else {
+        return false;
+    }
+};
+
+Window_PostMessage.prototype.faceWidth = function() {
+    return 0;
+};
+
+Window_PostMessage.prototype.charWidth = function() {
+    var text = $gameSystem.isJapanese() ? '\uff21' : 'A';
+    return this.textWidth(text);
+};
+
+Window_PostMessage.prototype.left = function() {
+    var nameCenter = (this.contentsWidth() + this.faceWidth()) / 2;
+    var nameWidth = (this._lineLength + 1) * this.charWidth();
+    return Math.min(nameCenter - nameWidth / 2, this.contentsWidth() - nameWidth);
+};
+
+Window_PostMessage.prototype.itemRect = function(index) {
+    return {
+        x: this.left() + index % this._lineLength * this.charWidth(),
+        y: 54 * Math.trunc(index / this._lineLength),
+        width: this.charWidth(),
+        height: this.lineHeight()
+    };
+};
+
+Window_PostMessage.prototype.underlineRect = function(index) {
+    var rect = this.itemRect(index);
+    rect.x++;
+    rect.y += rect.height - 4;
+    rect.width -= 2;
+    rect.height = 2;
+    return rect;
+};
+
+Window_PostMessage.prototype.underlineColor = function() {
+    return this.normalColor();
+};
+
+Window_PostMessage.prototype.drawUnderline = function(index) {
+    var rect = this.underlineRect(index);
+    var color = this.underlineColor();
+    this.contents.paintOpacity = 48;
+    this.contents.fillRect(rect.x, rect.y, rect.width, rect.height, color);
+    this.contents.paintOpacity = 255;
+};
+
+Window_PostMessage.prototype.drawChar = function(index) {
+    var rect = this.itemRect(index);
+    this.resetTextColor();
+    this.drawText(this._name[index] || '', rect.x, rect.y);
+};
+
+Window_PostMessage.prototype.refresh = function() {
+    this.contents.clear();
+    //this.drawActorFace(this._actor, 0, 0);
+    for (var i = 0; i < this._maxLength; i++) {
+        this.drawUnderline(i);
+    }
+    for (var j = 0; j < this._name.length; j++) {
+        this.drawChar(j);
+    }
+    var rect = this.itemRect(this._index);
+    this.setCursorRect(rect.x, rect.y, rect.width, rect.height);
+};
 
 
