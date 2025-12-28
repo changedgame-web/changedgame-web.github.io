@@ -364,16 +364,16 @@ DataManager.loadDataFile = function(name, src) {
     xhr.onload = function() {
         if (xhr.status < 400) {
             window[name] = JSON.parse(xhr.responseText);
-            //TEST
-            if(name == "$dataSystem") {
-                console.log("loading " + name);
-            }
+            // //TEST
+            // if(name == "$dataSystem") {
+            //     console.log("loading " + name);
+            // }
 
             DataManager.onLoad(window[name]);
 
-            if(name == "$dataSystem") {
-                console.log("loaded " + name);
-            }
+            // if(name == "$dataSystem") {
+            //     console.log("loaded " + name);
+            // }
 
         }
     };
@@ -601,7 +601,7 @@ Scene_Load.prototype.reloadMapIfUpdated = function() {
     //}
 };
 
-//modified: load files from subdirectories depending on localization prefrences
+//modified: load files from subdirectories depending on localization preferences
 DataManager.loadDatabase = function() {
     var test = this.isBattleTest() || this.isEventTest();
     var prefix = test ? 'Test_' : '';
@@ -664,6 +664,138 @@ ImageManager.isBigCharacter = function(filename) {
 };
 
 
+Game_CharacterBase.prototype.isTile = function() {
+    return this._tileId > 0 && this._priorityType === 0;
+};
+
+//vx NPC order behavior:
+//NPCs that use the tileset will always be drawn below the PC (if the NPC is set to same as PC)
+//if the tile is "star", or passthrough foreground, then the NPC with it will not be drawn
+//NPCs using the NPC files will behave the normal way.
+//MV behaves more expectedly I suppose... behavior is the exact same as a sprite || it will switch above/below based on Y level. (if the NPC is set to same as PC)
+//it will always be below if set to it.
+//we need to remove this feature then.
+
+
+//in vx, see: `object?`, if it has a tile id or its character name contains !
+//also see: screen_z, if tile_id > 0, then if it's a star tile, then depth is 160, otherwise, it's 40.
+
+
+Game_CharacterBase.prototype.screenZ = function() {
+
+    switch(this._priorityType) {
+        case 1: {
+
+            if(this._tileId > 0) {
+
+                var flags = $gameMap.tilesetFlags();
+                var flag = flags[this._tileId];
+
+                // [*] id
+                if ((flag & 0x10) !== 0) {
+                    return 4;
+                } else {
+                    return 0;
+                }
+
+            }
+            //Fallthrough
+        }
+        default: {
+            return this._priorityType * 2 + 1;
+        }
+    }
+
+    
+    //priority is 0 (below), 1 (same), 2 (above)
+    //returns:    1         3          5
+    //from ace:   60        100        200
+    //ace tiles:  160 for star, 40 for other
+    //closest MV: 4 for star, 0 for other
+
+    return this._priorityType * 2 + 1;
+};
+
+//vx screen shift description:
+//if image is smaller than the screen, it will tile to fill the screen to completion, and will not shift with walking
+//if image is larger than the screen, the image will be parallaxed so that each edge of the image lines up with each edge of the map.
+
+
+//vx has this enabled by default (or never had the feature to disable it)
+//nevermind. This doesn't scroll the same way as VX, so we don't touch it.
+// ImageManager.isZeroParallax = function(filename) {
+//     return filename.charAt(0) === '!';
+// };
+
+Game_Map.prototype.parallaxOx = function(bitmap_width) {
+    if (this._parallaxZero) {
+        return this._parallaxX * this.tileWidth();
+    } else if (this._parallaxLoopX) {
+        return this._parallaxX * this.tileWidth() / 2;
+    } else {
+
+        var map_width = ($dataMap.width * this.tileWidth()) - Graphics.width;
+        var bb_width = bitmap_width - Graphics.width;
+
+        //handle cases where the map doesn't move or where the image is smaller than the screen size
+        if(map_width <= 0 || bb_width < map_width) {
+            return 0;
+        }
+
+        var speed_ratio = (bb_width / map_width);
+        return this._parallaxX * this.tileWidth() * speed_ratio;
+
+        //return 0;
+    }
+};
+
+Game_Map.prototype.parallaxOy = function(bitmap_height) {
+    if (this._parallaxZero) {
+        return this._parallaxY * this.tileHeight();
+    } else if (this._parallaxLoopY) {
+        return this._parallaxY * this.tileHeight() / 2;
+    } else {
+
+        //1500 px tall,
+        //screen is 624 tall
+        //when at the bottom with this, we're at 850
+        //we NEED to be at 876 (bitmap height - screen height)
+
+        //height of the map in pixels
+        var map_height = ($dataMap.height * this.tileHeight()) - Graphics.height;
+        var bb_height = bitmap_height - Graphics.height;
+
+        //handle cases where the map doesn't move or where the image is smaller than the screen size
+        if(map_height <= 0 || bb_height < map_height) {
+            return 0;
+        }
+
+        var speed_ratio = (bb_height / map_height);
+        return this._parallaxY * this.tileHeight() * speed_ratio;
+        
+        //+value moves the bitmap up, -value moves it down
+        //return 0;
+
+    }
+};
+
+Spriteset_Map.prototype.updateParallax = function() {
+    if (this._parallaxName !== $gameMap.parallaxName()) {
+        this._parallaxName = $gameMap.parallaxName();
+
+        if (this._parallax.bitmap && Graphics.isWebGL() != true) {
+            this._canvasReAddParallax();
+        } else {
+            this._parallax.bitmap = ImageManager.loadParallax(this._parallaxName);
+        }
+    }
+    if (this._parallax.bitmap) {
+        this._parallax.origin.x = $gameMap.parallaxOx(this._parallax.texture.width);
+        this._parallax.origin.y = $gameMap.parallaxOy(this._parallax.texture.height);
+    }
+};
+
+
 
 //additional tweak: always show onscreen number buttons if showOnscreenControls is true.
 Window_NumberInput.prototype.updateButtonsVisiblity = function() {
@@ -690,6 +822,25 @@ Window_ShopNumber.prototype.updateButtonsVisiblity = function() {
 
 
 
+//debug extension: don't run events on ctrl
+Game_Event.prototype.start = function() {
+
+    //same as isDebugThrough()
+    if(Input.isPressed('control') && $gameTemp.isPlaytest()) {
+        return;
+    }
+
+    var list = this.list();
+    if (list && list.length > 1) {
+        this._starting = true;
+        if (this.isTriggerIn([0,1,2])) {
+            this.lock();
+        }
+    }
+};
+
+
+
 
 ///////////////////////////Temp Tests go below
 
@@ -701,6 +852,39 @@ Window_ShopNumber.prototype.updateButtonsVisiblity = function() {
 //             '<font color="yellow">' + 'Try the remote version: https://changedgame-web.github.io' + '</font><br>' );
 // };
 
+
+//See if we can eliminate those bulk warnings we seem to be getting
+Bitmap.prototype.drawText = function(text, x, y, maxWidth, lineHeight, align) {
+    // Note: Firefox has a bug with textBaseline: Bug 737852
+    //       So we use 'alphabetic' here.
+    if (text !== undefined) {
+        var tx = x;
+        var ty = y + lineHeight - (lineHeight - this.fontSize * 0.7) / 2;
+        var context = this._context;
+        var alpha = context.globalAlpha;
+        maxWidth = maxWidth || 0xffffffff;
+        if (align === 'center') {
+            tx += maxWidth / 2;
+        }
+        if (align === 'right') {
+            tx += maxWidth;
+        }
+        context.save();
+        context.font = this._makeFontNameText();
+        //this line has the problem
+        if(align != null) {
+            context.textAlign = align;
+        }
+
+        context.textBaseline = 'alphabetic';
+        context.globalAlpha = 1;
+        this._drawTextOutline(text, tx, ty, maxWidth);
+        context.globalAlpha = alpha;
+        this._drawTextBody(text, tx, ty, maxWidth);
+        context.restore();
+        this._setDirty();
+    }
+};
 
 
 

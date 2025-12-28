@@ -770,7 +770,11 @@ class RegularButton extends BaseButton{
     }
 
     removeFromScene(){
-        this.resetInput()
+    
+        //if the button isn't already disabled, don't release it. (solves a bug with sprinting between rooms with the buttons globally disabled)
+        if(this.active == true) {
+            this.resetInput()
+        }
         this.setColdImg()
         this.deactivate()
         this.divs[0].style.visibility = "hidden"
