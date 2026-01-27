@@ -1,6 +1,6 @@
 
 //see: https://github.com/DVLP/localStorageDB/blob/master/localdata.js
-(function () {
+var indexedDBInit = (function () {
     var win = typeof window !== 'undefined' ? window : {}
     var indexedDB = win.indexedDB || win.mozIndexedDB || win.webkitIndexedDB || win.msIndexedDB;
     if (typeof window !== 'undefined' && !indexedDB) {
@@ -63,7 +63,9 @@
                 'k': key,
                 'v': value
             });
-            txn.commit();
+            if (typeof txn.commit !== 'undefined') {
+                txn.commit();
+            }
         },
         delete: function (key, callback) {
             if (!db) {
@@ -140,7 +142,159 @@
     //    txn.commit();
     //   }
     // });
+});
+
+
+
+////////////////////////////////////////////////////////
+
+//note: this was vomited out by an LLM.
+//I may have overlooked its problems if it has any. Most people won't even see this anyway. Dang legacy safari users.
+var webSQLInit = (function () {
+    var win = typeof window !== 'undefined' ? window : {};
+    var openDatabase = win.openDatabase;
+
+    if (typeof window !== 'undefined' && !openDatabase) {
+        console.error('WebSQL not supported');
+        return;
+    }
+
+    // Open (or create) database
+    var db = openDatabase('ldb', '1.0', 'ldb', 5 * 1024 * 1024);
+
+    // Create table
+    db.transaction(function (tx) {
+        tx.executeSql(
+            'CREATE TABLE IF NOT EXISTS s (k TEXT PRIMARY KEY, v TEXT)',
+            []
+        );
+    });
+
+    function async(fn) {
+        setTimeout(fn, 0);
+    }
+
+    var ldb = {
+        get: function (key, callback) {
+            db.readTransaction(function (tx) {
+                tx.executeSql(
+                    'SELECT v FROM s WHERE k = ?',
+                    [key],
+                    function (tx, result) {
+                        if (result.rows.length) {
+                            callback(result.rows.item(0).v);
+                        } else {
+                            callback(null);
+                        }
+                    },
+                    function () {
+                        callback(null);
+                    }
+                );
+            });
+        },
+
+        set: function (key, value, callback) {
+            db.transaction(function (tx) {
+                tx.executeSql(
+                    'INSERT OR REPLACE INTO s (k, v) VALUES (?, ?)',
+                    [key, value]
+                );
+            }, null, function () {
+                if (typeof callback === 'function') callback();
+            });
+        },
+
+        delete: function (key, callback) {
+            db.transaction(function (tx) {
+                tx.executeSql(
+                    'DELETE FROM s WHERE k = ?',
+                    [key]
+                );
+            }, null, function () {
+                if (callback) callback();
+            });
+        },
+
+        list: function (callback) {
+            db.readTransaction(function (tx) {
+                tx.executeSql(
+                    'SELECT k FROM s',
+                    [],
+                    function (tx, result) {
+                        var keys = [];
+                        for (var i = 0; i < result.rows.length; i++) {
+                            keys.push(result.rows.item(i).k);
+                        }
+                        callback(keys);
+                    }
+                );
+            });
+        },
+
+        getAll: function (callback) {
+            db.readTransaction(function (tx) {
+                tx.executeSql(
+                    'SELECT k, v FROM s',
+                    [],
+                    function (tx, result) {
+                        var rows = [];
+                        for (var i = 0; i < result.rows.length; i++) {
+                            rows.push({
+                                k: result.rows.item(i).k,
+                                v: result.rows.item(i).v
+                            });
+                        }
+                        callback(rows);
+                    }
+                );
+            });
+        },
+
+        clear: function (callback) {
+            db.transaction(function (tx) {
+                tx.executeSql('DELETE FROM s', []);
+            }, null, function () {
+                if (callback) callback();
+            });
+        }
+    };
+
+    var exported = {
+        get: ldb.get,
+        set: ldb.set,
+        delete: ldb.delete,
+        list: ldb.list,
+        getAll: ldb.getAll,
+        clear: ldb.clear
+    };
+
+    win['ldb'] = exported;
+
+    if (typeof module !== 'undefined') {
+        module.exports = exported;
+    }
+});
+
+
+
+
+////////////////////////////////////////////////////////
+//choose what API to use: indexedDB or webSQL
+
+//indexedDBInit();
+//initialize either of the above
+(function () {
+    var win = typeof window !== 'undefined' ? window : {}
+    var indexedDB = win.indexedDB || win.mozIndexedDB || win.webkitIndexedDB || win.msIndexedDB;
+    if (typeof window !== 'undefined' && !indexedDB) {
+        console.warn("indexedDB not supported! Trying webSQL instead.");
+        webSQLInit();
+    } else {
+        indexedDBInit();
+    }
 })();
+
 
 
 ////////////////////////////////////////////////////////

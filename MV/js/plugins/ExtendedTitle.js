@@ -556,7 +556,7 @@ Scene_PostMessage.prototype.onInputOk = function() {
     outgoing = this._editWindow.name() + "\n";
 
 
-    fetch(`/printer`, {
+    fetch("/printer", {
         method: "POST",
         // headers: {
         //     "Content-Type": "application/json",

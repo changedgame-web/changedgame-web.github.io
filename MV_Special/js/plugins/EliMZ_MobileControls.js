@@ -464,16 +464,14 @@ Imported.Eli_MobileControls = true
 /* ========================================================================== */
 {
 
-const CONTROLS_PATH = "img/screen_controls/"
+var CONTROLS_PATH = "img/screen_controls/"
 
 /* ------------------------------- BUTTON BASE ------------------------------ */
-class BaseButton {
+function BaseButton() {
+    this.initMembers();
+}
 
-    constructor(){
-        this.initMembers()
-    }
-
-    initMembers(){
+    BaseButton.prototype.initMembers = function(){
         this.area = new Rectangle(0, 0, 0, 0)
         this.isOffScreen = false
         this.active = false
@@ -482,20 +480,20 @@ class BaseButton {
         this.imgs = [document.createElement("img")]
     }
 
-    createArea(){
-        const mainRect = this.divs[0].getBoundingClientRect()
+    BaseButton.prototype.createArea = function(){
+        var mainRect = standardizeRect(this.divs[0].getBoundingClientRect());
         this.area = new Rectangle(mainRect.x, mainRect.y, mainRect.width, mainRect.height)
     }
 
-    initialize(parameters){
+    BaseButton.prototype.initialize = function(parameters){
         this.setParameters(parameters)
     }
 
-    setParameters(parameters){
+    BaseButton.prototype.setParameters = function(parameters){
         this.parameters = parameters
     }
 
-    getScreenUnitsByOrientation(){
+    BaseButton.prototype.getScreenUnitsByOrientation = function(){
         return ["px", "px"];
         if(Plugin.isLandscape()){
             return ["vw", "vh"]
@@ -504,12 +502,12 @@ class BaseButton {
         }
     }
 
-    deactivate(){
+    BaseButton.prototype.deactivate = function(){
 		this.touchId = null
 		this.active = false
     }
 
-    setListeners(){
+    BaseButton.prototype.setListeners = function(){
         if(Utils.isMobileDevice()){
             this.setMobileListeners()
         }else{
@@ -517,17 +515,17 @@ class BaseButton {
         }
     }
 
-    setMouseListeners(){
+    BaseButton.prototype.setMouseListeners = function(){
         document.addEventListener('mousemove', this.handleMove.bind(this), {passive: false})
         document.addEventListener('mouseup', this.handleUp.bind(this))
     }
 
-    setMobileListeners(){
+    BaseButton.prototype.setMobileListeners = function(){
         document.addEventListener('touchmove', this.handleMove.bind(this), {passive: false})
         document.addEventListener('touchend', this.handleUp.bind(this))
     }
 
-    handleDown(event){
+    BaseButton.prototype.handleDown = function(event){
 
 
         //remove for multitouch to work
@@ -548,10 +546,10 @@ class BaseButton {
 	}
 
     //if it's a different finger
-    trackChangedTouches(event){
-        let hasChangedTouches = false
+    BaseButton.prototype.trackChangedTouches = function(event){
+        var hasChangedTouches = false
 
-        for (let i = 0; i < event.changedTouches.length; i++){
+        for (var i = 0; i < event.changedTouches.length; i++){
             if (this.touchId == event.changedTouches[i].identifier){
                 hasChangedTouches = true
                 event.clientX = event.changedTouches[i].clientX
@@ -562,18 +560,18 @@ class BaseButton {
         return hasChangedTouches
     }
 
-    handleMove(event){
+    BaseButton.prototype.handleMove = function(event){
         if(!this.active || event.changedTouches && !this.trackChangedTouches(event)) return
         this.operateHandleMove(event)
     }
 
-    operateHandleMove(event){}
+    BaseButton.prototype.operateHandleMove = function(event){}
 
-    isAnotherTouchId(event){
+    BaseButton.prototype.isAnotherTouchId = function(event){
         return event.changedTouches && this.touchId !== event.changedTouches[0].identifier
     }
 
-    handleUp(event) {
+    BaseButton.prototype.handleUp = function(event) {
         
         //compatibility with old IE versions... may not have the "target" field (this ended with IE9 in 2011, so we probably don't need to worry about it)
         //var target = event.srcElement;
@@ -592,31 +590,31 @@ class BaseButton {
 
     }
 
-    operateHandleUp(event){
+    BaseButton.prototype.operateHandleUp = function(event){
         this.setColdImg()
         this.deactivate()
     }
 
-    setColdImg(){
+    BaseButton.prototype.setColdImg = function(){
         this.imgs[0].src = this.imgs[0].dataset.imgCold
     }
 
-    setHotImg(){
+    BaseButton.prototype.setHotImg = function(){
         this.imgs[0].src = this.imgs[0].dataset.imgHot
     }
 
-    isHidden(){
+    BaseButton.prototype.isHidden = function(){
         return this.divs[0].style.visibility === "hidden"
     }
 
-    isVisible(){
+    BaseButton.prototype.isVisible = function(){
         return this.divs[0].style.visibility === "visible"
     }
 
-    getOffsetXOffScreen(){
-        const rect = this.divs[0].getBoundingClientRect()
-        const orientation = this.parameters.horizontalOrientation
-        const width = rect.width
+    BaseButton.prototype.getOffsetXOffScreen = function(){
+        var rect = standardizeRect(this.divs[0].getBoundingClientRect());
+        var orientation = this.parameters.horizontalOrientation
+        var width = rect.width
         if(orientation === "left"){
             return -(width + this.divs[0].offsetLeft)
         }else{
@@ -624,23 +622,22 @@ class BaseButton {
         }
     }
 
-    hide(){
+    BaseButton.prototype.hide = function(){
         if(!this.isOffScreen){
-            const offsetX = this.getOffsetXOffScreen()
+            var offsetX = this.getOffsetXOffScreen()
             this.divs[0].style.transition = '.1s'
-            this.divs[0].style.transform = `translate(${offsetX}px, 0px)`
+            this.divs[0].style.transform = "translate(" +  offsetX + "px, 0px)"
             this.isOffScreen = true
         }
     }
 
-    show(){
+    BaseButton.prototype.show = function(){
         this.divs[0].style.transition = '.1s'
-        this.divs[0].style.transform = `translate(0px, 0px)`
+        this.divs[0].style.transform = "translate(0px, 0px)"
         this.isOffScreen = false
     }
 
-
-    updateOnResize() {
+    BaseButton.prototype.updateOnResize = function() {
         //console.log("Button Resize");
 
         //resize clickable area helper
@@ -649,30 +646,32 @@ class BaseButton {
 
 
 
+/* ----------------------------- REGULAR BUTTON ----------------------------- */
+
+function RegularButton() {
+    BaseButton.call(this)
+    this.parameters = {
+        horizontalOrientation: "",
+        img: "",
+        key: "",
+        padX: 0,
+        padY: 0,
+        scenes: [""],
+        scriptIn: function() {},
+        scriptOut: function() {},
+        verticalOrientation: "",
+        vibration: 0,
+        width: 0,
+    }
 }
 
-/* ----------------------------- REGULAR BUTTON ----------------------------- */
-class RegularButton extends BaseButton{
+RegularButton.prototype = Object.create(BaseButton.prototype);
+RegularButton.prototype.constructor = RegularButton;
 
-	constructor(){
-        super()
-        this.parameters = {
-            horizontalOrientation: "",
-            img: "",
-            key: "",
-            padX: 0,
-            padY: 0,
-            scenes: [""],
-            scriptIn: () => {},
-            scriptOut: () => {},
-            verticalOrientation: "",
-            vibration: 0,
-            width: 0,
-        }
-	}
 
-    initialize(parameters){
-        super.initialize(parameters)
+
+    RegularButton.prototype.initialize = function(parameters){
+        BaseButton.prototype.initialize.call(this, parameters)
         this.createHtmlElements()
         this.setStyleToElements()
         this.appendElements()
@@ -681,21 +680,21 @@ class RegularButton extends BaseButton{
         this.setKeyboardKey()
     }
 
-    initMembers(){
-        super.initMembers()
+    RegularButton.prototype.initMembers = function(){
+        BaseButton.prototype.initMembers.call(this)
         this.keyboardKey = ""
     }
 
-    setKeyboardKey(){
+    RegularButton.prototype.setKeyboardKey = function(){
         if(!this.isScriptInput()){
-            const keyName = this.parameters.key.toLowerCase()
-            const key = Input.keyMapper[Eli.KeyCodes.keyboard[keyName]]
+            var keyName = this.parameters.key.toLowerCase()
+            var key = Input.keyMapper[Eli.KeyCodes.keyboard[keyName]]
             this.keyboardKey = key
         }
     }
 
-    createDiv(){
-        const div = document.createElement("div")
+    RegularButton.prototype.createDiv = function(){
+        var div = document.createElement("div")
         
         div.draggable = false  
         div.style.visibility = "hidden"
@@ -703,10 +702,11 @@ class RegularButton extends BaseButton{
         this.divs[0] = div
     }
 
-    createImage(){
-        const coldFrame = `${CONTROLS_PATH}${this.parameters.img}.png`
-        const hotFrame = `${CONTROLS_PATH}${this.parameters.img}_hot.png`
-        const img = document.createElement("img")
+    RegularButton.prototype.createImage = function(){
+        var coldFrame = CONTROLS_PATH + this.parameters.img + ".png"
+        var hotFrame = CONTROLS_PATH + this.parameters.img + "_hot.png"
+
+        var img = document.createElement("img")
 
         img.id = "buttonImg"
         img.src = coldFrame
@@ -717,59 +717,62 @@ class RegularButton extends BaseButton{
         this.imgs[0] = img
     }
 
-    createHtmlElements(){
+    RegularButton.prototype.createHtmlElements = function(){
         this.createDiv()
         this.createImage()
     }
 
-    onLoad(ev){
-        const imgWidth = this.parameters.width;
-        const imgHeight = this.parameters.height; //unused and undefined from the JSON file
-        const divStyle = this.divs[0].style
-        const imgStyle = this.imgs[0].style
-        const horPos = this.parameters.horizontalOrientation
-        const verPos = this.parameters.verticalOrientation
-        const [horUnit, verUnit] = this.getScreenUnitsByOrientation()
+    RegularButton.prototype.onLoad = function(ev){
+        var imgWidth = this.parameters.width;
+        var imgHeight = this.parameters.height; //unused and undefined from the JSON file
+        var divStyle = this.divs[0].style
+        var imgStyle = this.imgs[0].style
+        var horPos = this.parameters.horizontalOrientation
+        var verPos = this.parameters.verticalOrientation
+
+        var units = this.getScreenUnitsByOrientation();
+        var horUnit = units[0];
+        var verUnit = units[1];
 
         divStyle.position = "fixed"
         divStyle.boxSizing = "border-box"
-        divStyle[horPos] = `${this.parameters.padX}${horUnit}`
-        divStyle[verPos] = `${this.parameters.padY}${verUnit}`
+        divStyle[horPos] = "" + this.parameters.padX + horUnit;
+        divStyle[verPos] = "" + this.parameters.padY + verUnit;
 
         imgStyle.maxWidth = "100%"
-        imgStyle.width = `${imgWidth}${horUnit}`
+        imgStyle.width = "" + imgWidth + horUnit
 
-        //imgStyle.height = `${imgHeight}${verUnit}`
-        imgStyle.height = `auto`
+        //imgStyle.height = "" + imgHeight + verUnit
+        imgStyle.height = "auto"
 
         divStyle.width = this.imgs[0].width
         this.createArea()
     }
 
-    createArea(){
-        const mainRect = this.divs[0].getBoundingClientRect()
+    RegularButton.prototype.createArea = function(){
+        var mainRect = standardizeRect(this.divs[0].getBoundingClientRect());
         this.area = new Rectangle(mainRect.x, mainRect.y, mainRect.width, mainRect.height)
     }
 
-    setStyleToElements(){
+    RegularButton.prototype.setStyleToElements = function(){
         this.imgs[0].addEventListener("load", this.onLoad.bind(this), {once: true})
     }
 
-    appendElements(){
-        this.divs[0].append(this.imgs[0])
+    RegularButton.prototype.appendElements = function(){
+        this.divs[0].appendChild(this.imgs[0])
     }
 
-    setMouseListeners(){
+    RegularButton.prototype.setMouseListeners = function(){
         this.divs[0].addEventListener('mousedown', this.handleDown.bind(this))
-        super.setMouseListeners()
+        BaseButton.prototype.setMouseListeners.call(this)
     }
 
-    setMobileListeners(){
+    RegularButton.prototype.setMobileListeners = function(){
         this.divs[0].addEventListener('touchstart', this.handleDown.bind(this))
-        super.setMobileListeners()
+        BaseButton.prototype.setMobileListeners.call(this)
     }
 
-    removeFromScene(){
+    RegularButton.prototype.removeFromScene = function(){
     
         //if the button isn't already disabled, don't release it. (solves a bug with sprinting between rooms with the buttons globally disabled)
         if(this.active == true) {
@@ -780,56 +783,56 @@ class RegularButton extends BaseButton{
         this.divs[0].style.visibility = "hidden"
     }
 
-    addOnScene(){ 
+    RegularButton.prototype.addOnScene = function(){ 
         this.divs[0].style.visibility = "visible"
         this.onLoad()
     }
 
-    handleDown(event){
-        super.handleDown(event)
+    RegularButton.prototype.handleDown = function(event){
+        BaseButton.prototype.handleDown.call(this, event)
         this.setInput()
 	}
 
-    operateHandleMove(event) {
-        super.operateHandleMove(event)
-        const x = event.clientX
-        const y = event.clientY
+    RegularButton.prototype.operateHandleMove = function(event) {
+        BaseButton.prototype.operateHandleMove.call(this, event)
+        var x = event.clientX
+        var y = event.clientY
         if(!this.area.contains(x, y)){
             this.handleUp(event)
         }
     }
 
-    operateHandleUp(event) {
-        super.operateHandleUp(event)
+    RegularButton.prototype.operateHandleUp = function(event) {
+        BaseButton.prototype.operateHandleUp.call(this, event)
         this.resetInput()
     }
 
-    setInput(){
+    RegularButton.prototype.setInput = function(){
         if(navigator.vibrate){
             navigator.vibrate(this.parameters.vibration)
         }
         if(this.isScriptInput()){
             this.parameters.scriptIn()
         }else{
-            const key = this.keyboardKey
+            var key = this.keyboardKey
             Input._currentState[key] = true
         }
     }
 
-    isScriptInput(){
+    RegularButton.prototype.isScriptInput = function(){
         return this.parameters.key === "script"
     }
 
-    resetInput(){
+    RegularButton.prototype.resetInput = function(){
         if(this.isScriptInput()){
             this.parameters.scriptOut()
         }else{
-            const key = this.keyboardKey
+            var key = this.keyboardKey
             Input._currentState[key] = false
         }
     }
 
-    canAddToScene(sceneName){
+    RegularButton.prototype.canAddToScene = function(sceneName){
 
         //if showOnscreenControls exists and is false, then automatically return false
         if(ConfigManager != null && ConfigManager.showOnscreenControls != null && ConfigManager.showOnscreenControls == false) {
@@ -839,33 +842,37 @@ class RegularButton extends BaseButton{
 
     }
 
-}
+
 
 /* ----------------------------- CONTROL BUTTON ----------------------------- */
-class ControlButton extends RegularButton{
 
-    constructor(){
-        super()
-        this.parameters = {
-            enable: false,
-            horizontalOrientation: "",
-            img: "",
-            padX: 0,
-            padY: 0,
-            verticalOrientation: "",
-            vibrate: 0,
-            width: 0,
-        }
+function ControlButton() {
+    RegularButton.call(this)
+    this.parameters = {
+        enable: false,
+        horizontalOrientation: "",
+        img: "",
+        padX: 0,
+        padY: 0,
+        verticalOrientation: "",
+        vibrate: 0,
+        width: 0,
     }
+}
 
-    initMembers(){
-        super.initMembers()
+ControlButton.prototype = Object.create(RegularButton.prototype);
+ControlButton.prototype.constructor = ControlButton;
+
+
+
+    ControlButton.prototype.initMembers = function(){
+        RegularButton.prototype.initMembers.call(this)
         this.isHidingButtons = false
     }
 
-    setKeyboardKey(){}
+    ControlButton.prototype.setKeyboardKey = function(){}
 
-    setInput(){
+    ControlButton.prototype.setInput = function(){
         if($gameMessage.isBusy()) return
 
         if(this.isHidingButtons){
@@ -877,35 +884,39 @@ class ControlButton extends RegularButton{
         }
     }
 
-    resetInput(){}
+    ControlButton.prototype.resetInput = function(){}
 
-    canAddToScene(sceneName){
+    ControlButton.prototype.canAddToScene = function(sceneName){
         //if showOnscreenControls exists and is false, then automatically return false
         if(ConfigManager != null && ConfigManager.showOnscreenControls != null && ConfigManager.showOnscreenControls == false) {
             return false;
         }        
         return true
     }
-}
+
 
 /* ------------------------------- SINGLE DPAD ------------------------------ */
-class DpadController extends BaseButton{
 
-	constructor(){
-        super()
-        this.parameters = {
-            baseWidth: 0,
-            horizontalOrientation: "",
-            img: "",
-            padX: 0,
-            padY: 0,
-            scenes: [""],
-            verticalOrientation: "",
-        }
-	}
+function DpadController() {
+    BaseButton.call(this)
+    this.parameters = {
+        baseWidth: 0,
+        horizontalOrientation: "",
+        img: "",
+        padX: 0,
+        padY: 0,
+        scenes: [""],
+        verticalOrientation: "",
+    }
+}
 
-    initialize(parameters){
-        super.initialize(parameters)
+DpadController.prototype = Object.create(BaseButton.prototype);
+DpadController.prototype.constructor = DpadController;
+
+
+
+    DpadController.prototype.initialize = function(parameters){
+        BaseButton.prototype.initialize.call(this, parameters)
         this.createHtmlElements()
         this.setStyleToElements()
         this.appendElements()
@@ -913,23 +924,24 @@ class DpadController extends BaseButton{
         this.setListeners()
     }
 
-    initMembers(){
-        super.initMembers()
+    DpadController.prototype.initMembers = function(){
+        BaseButton.prototype.initMembers.call(this)
         this.directionAreas = new Array(10).fill(new Rectangle(0, 0, 0, 0))
     }
 
-    createDiv(){
-        const div = document.createElement("div")
+    DpadController.prototype.createDiv = function(){
+        var div = document.createElement("div")
         div.id = "dpadDiv"
         div.draggable = false  
         div.style.visibility = "hidden"
         this.divs[0] = div
     }
 
-    createImage(){
-        const coldFrame = `${CONTROLS_PATH}${this.parameters.img}.png`
-        const hotFrame = `${CONTROLS_PATH}${this.parameters.img}_hot.png`
-        const img = document.createElement("img")
+    DpadController.prototype.createImage = function(){    
+        var coldFrame = CONTROLS_PATH + this.parameters.img + ".png"
+        var hotFrame = CONTROLS_PATH + this.parameters.img + "_hot.png"
+
+        var img = document.createElement("img")
         img.id = "dpadImg"
         img.src = coldFrame
         img.draggable = false
@@ -939,50 +951,53 @@ class DpadController extends BaseButton{
         this.imgs[0] = img
     }
 
-    createHtmlElements(){
+    DpadController.prototype.createHtmlElements = function(){
         this.createDiv()
         this.createImage()
     }
 
-    onLoad(ev){
-        const imgWidth = this.parameters.baseWidth
-        const divStyle = this.divs[0].style
-        const imgStyle = this.imgs[0].style
-        const horPos = this.parameters.horizontalOrientation
-        const verPos = this.parameters.verticalOrientation
-        const [horUnit, verUnit] = this.getScreenUnitsByOrientation()
+    DpadController.prototype.onLoad = function(ev){
+        var imgWidth = this.parameters.baseWidth
+        var divStyle = this.divs[0].style
+        var imgStyle = this.imgs[0].style
+        var horPos = this.parameters.horizontalOrientation
+        var verPos = this.parameters.verticalOrientation
+
+        var units = this.getScreenUnitsByOrientation();
+        var horUnit = units[0];
+        var verUnit = units[1];
 
         divStyle.position = "absolute"
         divStyle.boxSizing = "border-box"
-        divStyle[horPos] = `${this.parameters.padX}${horUnit}`
-        divStyle[verPos] = `${this.parameters.padY}${verUnit}`
+        divStyle[horPos] = "" + this.parameters.padX + horUnit;
+        divStyle[verPos] = "" + this.parameters.padY + verUnit;
 
         imgStyle.maxWidth = "100%"
-        imgStyle.width = `${imgWidth}${horUnit}`
-        imgStyle.height = `auto`
+        imgStyle.width = "" + imgWidth + horUnit;
+        imgStyle.height = "auto"
 
         divStyle.width = this.imgs[0].width
         this.createArea()
         this.createDirectionArea()
     }
 
-    createDirectionArea(){
-        const mainRect = this.divs[0].getBoundingClientRect()
-        const width = mainRect.width/3
-        const height = mainRect.height/3
-        const rect0 = new Rectangle(0, 0, 0, 0)
+    DpadController.prototype.createDirectionArea = function(){
+        var mainRect = standardizeRect(this.divs[0].getBoundingClientRect());
+        var width = mainRect.width/3
+        var height = mainRect.height/3
+        var rect0 = new Rectangle(0, 0, 0, 0)
 
-        const upLeft = new Rectangle(mainRect.x, mainRect.y, width, height)
-        const up = new Rectangle(upLeft.right, mainRect.y, width, height)
-        const upRight = new Rectangle(up.right, mainRect.y, width, height)
+        var upLeft = new Rectangle(mainRect.x, mainRect.y, width, height)
+        var up = new Rectangle(upLeft.right, mainRect.y, width, height)
+        var upRight = new Rectangle(up.right, mainRect.y, width, height)
 
-        const left = new Rectangle(mainRect.x, upLeft.bottom, width, height)
-        const center = new Rectangle(left.right, upLeft.bottom, width, height)
-        const right = new Rectangle(center.right, upLeft.bottom, width, height)
+        var left = new Rectangle(mainRect.x, upLeft.bottom, width, height)
+        var center = new Rectangle(left.right, upLeft.bottom, width, height)
+        var right = new Rectangle(center.right, upLeft.bottom, width, height)
 
-        const downLeft = new Rectangle(mainRect.x, left.bottom, width, height)
-        const down = new Rectangle(downLeft.right, left.bottom, width, height)
-        const downRight = new Rectangle(down.right, left.bottom, width, height)
+        var downLeft = new Rectangle(mainRect.x, left.bottom, width, height)
+        var down = new Rectangle(downLeft.right, left.bottom, width, height)
+        var downRight = new Rectangle(down.right, left.bottom, width, height)
 
         //3x3 grid of touch location
         this.directionAreas = [
@@ -993,37 +1008,37 @@ class DpadController extends BaseButton{
 
     }
 
-    setStyleToElements(){
+    DpadController.prototype.setStyleToElements = function(){
         this.imgs[0].addEventListener("load", this.onLoad.bind(this), {once: true})
     }
 
-    appendElements(){
-        this.divs[0].append(this.imgs[0])
+    DpadController.prototype.appendElements = function(){
+        this.divs[0].appendChild(this.imgs[0])
     }
 
-    setMouseListeners(){
+    DpadController.prototype.setMouseListeners = function(){
         this.divs[0].addEventListener('mousedown', this.handleDown.bind(this))
-        super.setMouseListeners()
+        BaseButton.prototype.setMouseListeners.call(this)
     }
 
-    setMobileListeners(){
+    DpadController.prototype.setMobileListeners = function(){
         this.divs[0].addEventListener('touchstart', this.handleDown.bind(this))
-        super.setMobileListeners()
+        BaseButton.prototype.setMobileListeners.call(this)
     }
 
-    removeFromScene(){
+    DpadController.prototype.removeFromScene = function(){
         this.setColdImg()
         this.resetInput()
         this.deactivate()
         this.divs[0].style.visibility = "hidden"
     }
 
-    addOnScene(){ 
+    DpadController.prototype.addOnScene = function(){ 
         this.divs[0].style.visibility = "visible"
         this.onLoad()
     }
 
-    getClientCoordinates(event){
+    DpadController.prototype.getClientCoordinates = function(event){
         if(event.changedTouches){
             return { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY }
         }else{
@@ -1031,59 +1046,67 @@ class DpadController extends BaseButton{
         }
     }
 
-    getTouchId(event){
+    DpadController.prototype.getTouchId = function(event){
         return event.changedTouches[0].identifier
     }
 
-    getDirection(coordinates){
-        const {x, y} = coordinates
-        return this.directionAreas.findIndex(rect => rect.contains(x, y))
+    DpadController.prototype.getDirection = function(coordinates){
+        var x = coordinates.x;
+        var y = coordinates.y;
+
+        for(var i = 0; i < this.directionAreas.length; ++i) {
+            if(this.directionAreas[i].contains(x, y)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
-    handleDown(event){
+    DpadController.prototype.handleDown = function(event){
 
-        if(event instanceof TouchEvent) {
-            for (let i = 0; i < event.changedTouches.length; i++) {
-                console.log(
-                `changedTouches[${i}].identifier = ${event.changedTouches[i].identifier}`,
-                );
+        if (typeof TouchEvent !== 'undefined') {
+            if(event instanceof TouchEvent) {
+                for (var i = 0; i < event.changedTouches.length; i++) {
+                    console.log(
+                    "changedTouches[" + i + "].identifier = " + event.changedTouches[i].identifier
+                    );
+                }
             }
         }
         //console.log("DOWN");
 
 
         //parent button down event
-        super.handleDown(event);
+        BaseButton.prototype.handleDown.call(this, event);
         //get local X and Y coords
-        const coordinates = this.getClientCoordinates(event);
+        var coordinates = this.getClientCoordinates(event);
 
         //does array lookup given X and Y coords
-        const direction = this.getDirection(coordinates)
+        var direction = this.getDirection(coordinates)
         this.setInput(direction)
 	}
 
-    operateHandleMove(event) {
-        super.operateHandleMove(event)
-        const x = event.clientX
-        const y = event.clientY
-        const diretion = this.getDirection({x, y})
+    DpadController.prototype.operateHandleMove = function(event) {
+        BaseButton.prototype.operateHandleMove.call(this, event)
+        var coords = {x: event.clientX, y: event.clientY}
+        var diretion = this.getDirection(coords)
         this.setInput(diretion)
     }
 
-    operateHandleUp(event) {
-        super.operateHandleUp(event)
+    DpadController.prototype.operateHandleUp = function(event) {
+        BaseButton.prototype.operateHandleUp.call(this, event)
         this.resetInput()
     }
 
-    setInput(direction){
-        const isRight = [6, 3, 9].includes(direction)
-        const isDown =[2, 1, 3].includes(direction)
-        const isLeft = [4, 7, 1].includes(direction)
-        const isUp = [8, 7, 9].includes(direction)
-        const isDownRight = direction === 3
-        const isDownLeft = direction === 1
-        const isUpLeft = direction === 7
-        const isUpRight = direction === 9
+    DpadController.prototype.setInput = function(direction){
+        var isRight = [6, 3, 9].includes(direction)
+        var isDown =[2, 1, 3].includes(direction)
+        var isLeft = [4, 7, 1].includes(direction)
+        var isUp = [8, 7, 9].includes(direction)
+        var isDownRight = direction === 3
+        var isDownLeft = direction === 1
+        var isUpLeft = direction === 7
+        var isUpRight = direction === 9
 
         Input._currentState['right'] = isRight || isDownRight || isUpRight
         Input._currentState['down'] = isDown || isDownRight || isDownLeft
@@ -1091,14 +1114,14 @@ class DpadController extends BaseButton{
         Input._currentState['up'] = isUp || isUpLeft || isUpRight
     }
 
-    resetInput(){
+    DpadController.prototype.resetInput = function(){
         Input._currentState['up'] = false
         Input._currentState['down'] = false
         Input._currentState['left'] = false
         Input._currentState['right'] = false
     }
 
-    canAddToScene(sceneName){
+    DpadController.prototype.canAddToScene = function(sceneName){
         //if showOnscreenControls exists and is false, then automatically return false
         if(ConfigManager != null && ConfigManager.showOnscreenControls != null && ConfigManager.showOnscreenControls == false) {
             return false;
@@ -1106,34 +1129,36 @@ class DpadController extends BaseButton{
         return this.parameters.scenes.includes(sceneName) && this.parameters.enableCondition()
     }
 
-    updateOnResize() {
+    DpadController.prototype.updateOnResize = function() {
         this.createArea();
         this.createDirectionArea();
     }
     
-}
 
 /* -------------------------------- JOYSTICK (bugged, todo: fix this) -------------------------------- */
-class JoystickController extends BaseButton{
 
-	constructor(){
-        super()
-        this.parameters = {
-            ballImg: "",
-            ballWidth: 0,
-            baseImg: "",
-            baseWidth: 0,
-            extraDistance: 0,
-            horizontalOrientation: "",
-            padX: 0,
-            padY: 0,
-            scenes: [""],
-            verticalOrientation: "",
-        }
-	}
+function JoystickController() {
+    BaseButton.call(this)
+    this.parameters = {
+        ballImg: "",
+        ballWidth: 0,
+        baseImg: "",
+        baseWidth: 0,
+        extraDistance: 0,
+        horizontalOrientation: "",
+        padX: 0,
+        padY: 0,
+        scenes: [""],
+        verticalOrientation: "",
+    }
+}
 
-    initialize(parameters){
-        super.initialize(parameters)
+JoystickController.prototype = Object.create(BaseButton.prototype);
+JoystickController.prototype.constructor = JoystickController;
+
+
+    JoystickController.prototype.initialize = function(parameters){
+        BaseButton.prototype.initialize.call(this, parameters)
         this.createHtmlElements()
         this.appendElements()
         this.setStyleToElements()
@@ -1141,26 +1166,27 @@ class JoystickController extends BaseButton{
         this.setListeners()
     }
 
-    initMembers(){
-        super.initMembers()
+    JoystickController.prototype.initMembers = function(){
+        BaseButton.prototype.initMembers.call(this)
         this.divs[1] = document.createElement("div")
         this.imgs[1] = document.createElement("img")
         this.maxDistance = 0
         this.dragStart = null
     }
 
-    createBaseDiv(){
-        const div = document.createElement("div")
+    JoystickController.prototype.createBaseDiv = function(){
+        var div = document.createElement("div")
         div.id = "joystickBaseDiv"
         div.draggable = false  
         div.style.visibility = "hidden"
         this.divs[0] = div
     }
 
-    createBaseImg(){
-        const coldFrame = `${CONTROLS_PATH}${this.parameters.baseImg}.png`
-        const hotFrame = `${CONTROLS_PATH}${this.parameters.baseImg}_hot.png`
-        const img = document.createElement("img")
+    JoystickController.prototype.createBaseImg = function(){
+        var coldFrame = CONTROLS_PATH + this.parameters.baseImg + ".png"
+        var hotFrame = CONTROLS_PATH + this.parameters.baseImg + "_hot.png"
+
+        var img = document.createElement("img")
         img.id = "joystickBaseImg"
         img.src = coldFrame
         img.draggable = false
@@ -1170,18 +1196,19 @@ class JoystickController extends BaseButton{
         this.imgs[0] = img
     }
 
-    createStickDiv(){
-        const div = document.createElement("div")
+    JoystickController.prototype.createStickDiv = function(){
+        var div = document.createElement("div")
         div.id = "joystickBallDiv"
         div.draggable = false
         this.divs[1] = div
         this.divs[1].style.visibility = "hidden"
     }
 
-    createStickImg(){
-        const coldFrame = `${CONTROLS_PATH}${this.parameters.ballImg}.png`
-        const hotFrame = `${CONTROLS_PATH}${this.parameters.ballImg}_hot.png`
-        const img = document.createElement("img")
+    JoystickController.prototype.createStickImg = function(){
+        var coldFrame = CONTROLS_PATH + this.parameters.ballImg + ".png"
+        var hotFrame = CONTROLS_PATH + this.parameters.ballImg + "_hot.png"
+
+        var img = document.createElement("img")
         img.id = "joystickBallImg"
         img.src = coldFrame
         img.draggable = false
@@ -1191,86 +1218,100 @@ class JoystickController extends BaseButton{
         this.imgs[1] = img
     }
 
-    createHtmlElements(){
+    JoystickController.prototype.createHtmlElements = function(){
         this.createBaseDiv()
         this.createBaseImg()
         this.createStickDiv()
         this.createStickImg()
     }
 
-    onLoad(ev){
-        const imgWidth = this.parameters.baseWidth
-        const divStyle = this.divs[0].style
-        const imgStyle = this.imgs[0].style
-        const horPos = this.parameters.horizontalOrientation
-        const verPos = this.parameters.verticalOrientation
-        const [horUnit, verUnit] = this.getScreenUnitsByOrientation()
+    JoystickController.prototype.onLoad = function(ev){
+        var imgWidth = this.parameters.baseWidth;
+        var divStyle = this.divs[0].style;
+        var imgStyle = this.imgs[0].style;
+        var horPos = this.parameters.horizontalOrientation;
+        var verPos = this.parameters.verticalOrientation;
 
-        divStyle.position = "fixed"
-        divStyle.boxSizing = "border-box"
-        divStyle[horPos] = `${this.parameters.padX}${horUnit}`
-        divStyle[verPos] = `${this.parameters.padY}${verUnit}`
-        imgStyle.maxWidth = "100%"
-        imgStyle.width = `${imgWidth}${horUnit}`
-        imgStyle.height = `auto`
+        var units = this.getScreenUnitsByOrientation();
+        var horUnit = units[0];
+        var verUnit = units[1];
+
+        divStyle.position = "fixed";
+        divStyle.boxSizing = "border-box";
+        divStyle[horPos] = "" + this.parameters.padX + horUnit;
+        divStyle[verPos] = "" + this.parameters.padY + verUnit;
+        imgStyle.maxWidth = "100%";
+        imgStyle.width = "" + imgWidth + horUnit;
+        imgStyle.height = "auto";
 
         divStyle.width = this.imgs[0].width
         this.imgs[1].addEventListener("load", this.onStickImgLoad.bind(this), {once: true})
     }
 
-    onStickImgLoad(ev){
-        const imgWidth = this.parameters.ballWidth
-        const divStyle = this.divs[1].style
-        const imgStyle = this.imgs[1].style
-        const xPos = () => this.imgs[0].width/2 - this.imgs[1].width/2
-        const yPos = () => this.imgs[0].height/2 - this.imgs[1].height/2
-        const [horUnit, verUnit] = this.getScreenUnitsByOrientation()
+    JoystickController.prototype.onStickImgLoad = function(ev){
+        var imgWidth = this.parameters.ballWidth
+        var divStyle = this.divs[1].style
+        var imgStyle = this.imgs[1].style
+        var xPos = function() {this.imgs[0].width/2 - this.imgs[1].width/2}
+        var yPos = function() {this.imgs[0].height/2 - this.imgs[1].height/2}
+
+        var units = this.getScreenUnitsByOrientation();
+        var horUnit = units[0];
+        var verUnit = units[1];
+
 
         divStyle.position = "absolute"
         imgStyle.maxWidth = "100%"
-        imgStyle.width = `${imgWidth}${horUnit}`
-        imgStyle.height = `auto`
+        imgStyle.width = "" + imgWidth + horUnit;
+        imgStyle.height = "auto"
         divStyle.width = this.imgs[1].width
-        divStyle.top = `${yPos()}px`
-        divStyle.left = `${xPos()}px`
+        divStyle.top = "" + yPos() + "px";
+        divStyle.left = "" + xPos() + "px";
         this.maxDistance = Math.abs(this.divs[0].clientWidth/2 - this.divs[1].clientWidth/2) + this.parameters.extraDistance
         this.createArea()
     }
 
-    setStyleToElements(){
+    JoystickController.prototype.setStyleToElements = function(){
         this.imgs[0].addEventListener("load", this.onLoad.bind(this), {once: true})
     }
 
-    appendElements(){
-        this.divs[0].append(this.imgs[0], this.divs[1])
-        this.divs[1].append(this.imgs[1])
+    JoystickController.prototype.appendElements = function(){
+        this.divs[0].appendChild(this.imgs[0]);
+        this.divs[0].appendChild(this.divs[1]);       
+        this.divs[1].appendChild(this.imgs[1]);
     }
 
-    deactivate(){
-        super.deactivate()
+    JoystickController.prototype.deactivate = function(){
+        BaseButton.prototype.deactivate.call(this)
 		this.dragStart = null
     }
 
-    setMouseListeners(){
+    JoystickController.prototype.setMouseListeners = function(){
         this.divs[1].addEventListener('mousedown', this.handleDown.bind(this))
-        super.setMouseListeners()
+        BaseButton.prototype.setMouseListeners.call(this)
     }
 
-    setMobileListeners(){
+    JoystickController.prototype.setMobileListeners = function(){
         this.divs[1].addEventListener('touchstart', this.handleDown.bind(this))
-        super.setMobileListeners()
+        BaseButton.prototype.setMobileListeners.call(this)
     }
 
-    handleDown(event){
+    JoystickController.prototype.handleDown = function(event){
         this.divs[1].style.transition = '0s'
-        super.handleDown(event)
+        BaseButton.prototype.handleDown.call(this, event)
         this.setDragStart(event)
 	}
 
-    operateHandleMove(event){
-        super.operateHandleMove(event)
-        const [xDiff, yDiff] = this.getCoordinateDifference(event)
-        const [angle, distance] = this.getAngleAndDistance(xDiff, yDiff)
+    JoystickController.prototype.operateHandleMove = function(event){
+        BaseButton.prototype.operateHandleMove.call(this, event)
+        var coordDifference = this.getCoordinateDifference(event);
+        var angleDistance = this.getAngleAndDistance(xDiff, yDiff);
+
+        var xDiff = coordDifference[0];
+        var yDiff = coordDifference[1];
+        var angle = angleDistance[0];
+        var distance = angleDistance[1];
+
 
         this.moveStick(angle, distance)
 
@@ -1281,36 +1322,36 @@ class JoystickController extends BaseButton{
         }
     }
 
-    operateHandleUp(event){
-        super.operateHandleUp(event)
+    JoystickController.prototype.operateHandleUp = function(event){
+        BaseButton.prototype.operateHandleUp.call(this, event)
         this.resetStickPosition()
         this.resetMoveInput()
     }
 
-    isHidden(){
-        return  super.isHidden() && 
+    JoystickController.prototype.isHidden = function(){
+        return  BaseButton.prototype.isHidden.call(this) && 
                 this.divs[1].style.visibility === "hidden"
     }
 
-    isVisible(){
-        return  super.isVisible() && 
+    JoystickController.prototype.isVisible = function(){
+        return  BaseButton.prototype.isVisible.call(this) && 
                 this.divs[1].style.visibility === "visible"
     }
 
-    removeFromScene(){
+    JoystickController.prototype.removeFromScene = function(){
         this.divs[1].style.transition = '0s'
         this.divs[1].style.visibility = "hidden"
         this.divs[0].style.visibility = "hidden"
     }
 
-    addOnScene(){
+    JoystickController.prototype.addOnScene = function(){
         this.divs[1].style.visibility = "visible"
         this.divs[0].style.visibility = "visible"
         this.onLoad()
         this.onStickImgLoad()
     }
 
-    setDragStart(event){
+    JoystickController.prototype.setDragStart = function(event){
         if(event.changedTouches){
             this.dragStart = { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY }
         }else{
@@ -1318,71 +1359,74 @@ class JoystickController extends BaseButton{
         }
     }
 
-    setColdImg(){
-        super.setColdImg()
+    JoystickController.prototype.setColdImg = function(){
+        BaseButton.prototype.setColdImg.call(this)
         this.imgs[1].src = this.imgs[1].dataset.imgCold
     }
 
-    setHotImg(){
-        super.setHotImg()
+    JoystickController.prototype.setHotImg = function(){
+        BaseButton.prototype.setHotImg.call(this)
         this.imgs[1].src = this.imgs[1].dataset.imgHot
     }
 
-    getCoordinateDifference(event){
-        const xDiff = event.clientX - this.dragStart.x
-        const yDiff = event.clientY - this.dragStart.y
+    JoystickController.prototype.getCoordinateDifference = function(event){
+        var xDiff = event.clientX - this.dragStart.x
+        var yDiff = event.clientY - this.dragStart.y
 
         return [xDiff, yDiff]
     }
 
-    isOnDeadZone(distance){
-        const deadZone = this.imgs[1].width / 2
+    JoystickController.prototype.isOnDeadZone = function(distance){
+        var deadZone = this.imgs[1].width / 2
         return distance < deadZone
     }
 
-    moveStick(angle, distance){
-        const [xPosition, yPosition] = this.getStickOffset(angle, distance)
-        this.divs[1].style.transform = `translate(${xPosition}px, ${yPosition}px)`
+    JoystickController.prototype.moveStick = function(angle, distance){
+        var stickOffset = this.getStickOffset(angle, distance);
+        var xPosition = stickOffset[0];
+        var yPosition = stickOffset[1];
+
+        this.divs[1].style.transform = "translate(" + xPosition + "px, " + yPosition + "px)"
     }
 
-    getStickOffset(angle, distance){
-        const xPosition = distance * Math.cos(angle)
-        const yPosition = distance * Math.sin(angle)
+    JoystickController.prototype.getStickOffset = function(angle, distance){
+        var xPosition = distance * Math.cos(angle)
+        var yPosition = distance * Math.sin(angle)
 
         return [xPosition, yPosition]
     }
 
-    getAngleAndDistance(xDiff, yDiff){
-        const angle = Math.atan2(yDiff, xDiff)
-        const distance = Math.min(this.maxDistance, Math.hypot(xDiff, yDiff))
+    JoystickController.prototype.getAngleAndDistance = function(xDiff, yDiff){
+        var angle = Math.atan2(yDiff, xDiff)
+        var distance = Math.min(this.maxDistance, Math.hypot(xDiff, yDiff))
 
         return [angle, distance]
     }
 
-    resetStickPosition(){
+    JoystickController.prototype.resetStickPosition = function(){
         this.divs[1].style.transition = '.2s'
-        this.divs[1].style.transform = `translate(0px, 0px)`
+        this.divs[1].style.transform = "translate(0px, 0px)"
     }
 
-    isBetween(number, min, max){
+    JoystickController.prototype.isBetween = function(number, min, max){
         return number > min && number < max
     }
 
-    isBetweenOrEqual(number, min, max){
+    JoystickController.prototype.isBetweenOrEqual = function(number, min, max){
         return number >= min && number <= max
     }
 
-    setInput(angle){
+    JoystickController.prototype.setInput = function(angle){
         angle *= (180/Math.PI)
 
-        const isRight = this.isBetweenOrEqual(angle, -45, 45)
-        const isDown = this.isBetweenOrEqual(angle, 45, 135)
-        const isLeft = this.isBetweenOrEqual(angle, 135, 180) || this.isBetweenOrEqual(angle, -180, -135)
-        const isUp = this.isBetweenOrEqual(angle, -135, -45)
-        const isDownRight = this.isBetweenOrEqual(angle, 22.5, 67.5)
-        const isDownLeft = this.isBetweenOrEqual(angle, 112.5, 157.5)
-        const isUpLeft = this.isBetweenOrEqual(angle, -157.5, -112.5)
-        const isUpRight = this.isBetweenOrEqual(angle, -67.5, -22.5)
+        var isRight = this.isBetweenOrEqual(angle, -45, 45)
+        var isDown = this.isBetweenOrEqual(angle, 45, 135)
+        var isLeft = this.isBetweenOrEqual(angle, 135, 180) || this.isBetweenOrEqual(angle, -180, -135)
+        var isUp = this.isBetweenOrEqual(angle, -135, -45)
+        var isDownRight = this.isBetweenOrEqual(angle, 22.5, 67.5)
+        var isDownLeft = this.isBetweenOrEqual(angle, 112.5, 157.5)
+        var isUpLeft = this.isBetweenOrEqual(angle, -157.5, -112.5)
+        var isUpRight = this.isBetweenOrEqual(angle, -67.5, -22.5)
 
         Input._currentState['right'] = isRight || isDownRight || isUpRight
         Input._currentState['down'] = isDown || isDownRight || isDownLeft
@@ -1390,14 +1434,14 @@ class JoystickController extends BaseButton{
         Input._currentState['up'] = isUp || isUpLeft || isUpRight
     }
 
-    resetMoveInput(){
+    JoystickController.prototype.resetMoveInput = function(){
         Input._currentState['up'] = false
         Input._currentState['down'] = false
         Input._currentState['left'] = false
         Input._currentState['right'] = false
     }
 
-    canAddToScene(sceneName){
+    JoystickController.prototype.canAddToScene = function(sceneName){
         //if showOnscreenControls exists and is false, then automatically return false
         if(ConfigManager != null && ConfigManager.showOnscreenControls != null && ConfigManager.showOnscreenControls == false) {
             return false;
@@ -1405,26 +1449,26 @@ class JoystickController extends BaseButton{
         return this.parameters.scenes.includes(sceneName) && this.parameters.enableCondition()
     }
     
-}
 
 /* ------------------------------ PLUGIN OBJECT ----------------------------- */
-class Parameters{
-    constructor(parameters){
-        this.allowedPlatforms = JSON.parse(parameters.allowedPlatforms)
-        this.disableDoubleTouchMenu = parameters.disableDoubleTouchMenu === "true"
-        this.disableScreenMove = parameters.disableScreenMove === "true"
-        this.hideOnMessage = parameters.hideOnMessage === "true"
-        this.fixButtonSize = (parameters.fixButtonSize || "false") === "true"
-        this.fixButtonInterval = Math.max(Number(parameters.fixButtonInterval || "120"), 1)
-        this.dPadType = parameters.dPadType
-        this.controlButton = this.parseControlButtonParameters(parameters.controlButton)
-        this.joystickPad = this.parseJoystickParameters(parameters.joystickPad)
-        this.singlePad = this.parseSinglePadParameters(parameters.singlePad)
-        this.buttons = this.parseRegularButtonParameters(parameters.buttons)
-    }
 
-    parseControlButtonParameters(rawParam){
-        const param = JSON.parse(rawParam)
+function Parameters(parameters) {
+    this.allowedPlatforms = JSON.parse(parameters.allowedPlatforms)
+    this.disableDoubleTouchMenu = parameters.disableDoubleTouchMenu === "true"
+    this.disableScreenMove = parameters.disableScreenMove === "true"
+    this.hideOnMessage = parameters.hideOnMessage === "true"
+    this.fixButtonSize = (parameters.fixButtonSize || "false") === "true"
+    this.fixButtonInterval = Math.max(Number(parameters.fixButtonInterval || "120"), 1)
+    this.dPadType = parameters.dPadType
+    this.controlButton = this.parseControlButtonParameters(parameters.controlButton)
+    this.joystickPad = this.parseJoystickParameters(parameters.joystickPad)
+    this.singlePad = this.parseSinglePadParameters(parameters.singlePad)
+    this.buttons = this.parseRegularButtonParameters(parameters.buttons)
+}
+
+
+    Parameters.prototype.parseControlButtonParameters = function(rawParam){
+        var param = JSON.parse(rawParam)
 
         return {
             enable: param.enable === "true",
@@ -1440,8 +1484,8 @@ class Parameters{
         }
     }
 
-    parseSinglePadParameters(rawParam){
-        const param = JSON.parse(rawParam)
+    Parameters.prototype.parseSinglePadParameters = function(rawParam){
+        var param = JSON.parse(rawParam)
 
         return {
             baseWidth: Number(param.baseWidth),
@@ -1451,12 +1495,12 @@ class Parameters{
             padY: Number(param.padY),
             scenes: JSON.parse(param.scenes),
             verticalOrientation: param.verticalOrientation,
-            enableCondition: param.condition ? new Function(`${param.condition}`) : new Function("return true")
+            enableCondition: param.condition ? new Function(param.condition) : new Function("return true")
         }
     }
 
-    parseJoystickParameters(rawParam){
-        const param = JSON.parse(rawParam)
+    Parameters.prototype.parseJoystickParameters = function(rawParam){
+        var param = JSON.parse(rawParam)
 
         return {
             ballImg: param.ballImg,
@@ -1469,16 +1513,17 @@ class Parameters{
             padY: Number(param.padY),
             scenes: JSON.parse(param.scenes),
             verticalOrientation: param.verticalOrientation,
-            enableCondition: param.condition ? new Function(`${param.condition}`) : new Function("return true")
+            enableCondition: param.condition ? new Function(param.condition) : new Function("return true")
         }
     }
 
-    parseRegularButtonParameters(rawParam){
-        const buttonParams = JSON.parse(rawParam)
-        const buttons = []
+    Parameters.prototype.parseRegularButtonParameters = function(rawParam){
+        var buttonParams = JSON.parse(rawParam)
+        var buttons = []
 
-        for(const param of buttonParams){
-            const button = JSON.parse(param)
+        for(var i = 0; i < buttonParams.length; ++i) {
+            var param = buttonParams[i];
+            var button = JSON.parse(param)
             buttons.push({
                 horizontalOrientation: button.horizontalOrientation,
                 img: button.img,
@@ -1491,13 +1536,13 @@ class Parameters{
                 verticalOrientation: button.verticalOrientation,
                 vibration: Number(button.vibration),
                 width: Number(button.width),
-                enableCondition: button.condition ? new Function(`${button.condition}`) : new Function("return true")
+                enableCondition: button.condition ? new Function(button.condition) : new Function("return true")
             })
         }
 
         return buttons
     }
-}
+
 
 Eli.MobileControls = {
 
@@ -1519,16 +1564,18 @@ Eli.MobileControls = {
     timeForRefresh: 0,
     isHidingButtons: false,
 
-    initialize(){},
+    initialize: function(){},
 
-    initPluginCommands(){},
+    initPluginCommands: function(){},
 
-    createHtmlElements(){
+    createHtmlElements: function(){
 
         this.createDiv();
         this.createDpad();
 
-        for(var parameters of this.param().buttons){
+        var vbuttons = this.param().buttons;
+        for(var i = 0; i < vbuttons.length; ++i) {
+            var parameters = vbuttons[i];
             this.createRegularButton(parameters);
         }
 
@@ -1539,8 +1586,8 @@ Eli.MobileControls = {
         this.disableContextMenu()
     },
 
-    createDiv(){
-        const div = document.createElement('div')
+    createDiv: function(){
+        var div = document.createElement('div')
         div.id = 'ScreenButton'
         div.style.position = "absolute"
         div.style.overflow = "hidden"
@@ -1550,11 +1597,11 @@ Eli.MobileControls = {
         div.style.right = 0+'px'
         div.style.bottom = 0+'px'
         div.style.margin = "auto"
-        document.body.append(div)
+        document.body.appendChild(div)
         this.divContainer = div
     },
 
-    createDpad(){
+    createDpad: function(){
         if(this.param().dPadType === "singlePad"){
             this.createSingleDpad();
 
@@ -1563,22 +1610,22 @@ Eli.MobileControls = {
         }
     },
 
-    createSingleDpad(){
+    createSingleDpad: function(){
         this.dpad.initialize(this.param().singlePad);
         this.addToDiv(this.dpad.divs[0]);
         this.elements.push(this.dpad.divs[0]);
         this.buttonList.push(this.dpad);
     },
 
-    createJoystick(){
+    createJoystick: function(){
         this.joystick.initialize(this.param().joystickPad);
         this.buttonList.push(this.joystick);
         this.elements.push(this.joystick.divs[0]);
         this.addToDiv(this.joystick.divs[0]);
     },
 
-    createRegularButton(parameters){
-        const button = new RegularButton();
+    createRegularButton: function(parameters){
+        var button = new RegularButton();
         button.initialize(parameters);
 
         this.addToDiv(button.divs[0]);
@@ -1586,52 +1633,53 @@ Eli.MobileControls = {
         this.buttonList.push(button);
     },
 
-    createControlButton(){   
+    createControlButton: function(){   
         this.controlButton.initialize(this.param().controlButton)
         this.addToDiv(this.controlButton.divs[0]) 
     },
 
-    disableContextMenu(){
-        const oncontextmenu = (ev) => {
+    disableContextMenu: function(){
+        var oncontextmenu = function(ev) {
             ev.preventDefault()
             return false
         }
         this.divContainer.addEventListener("contextmenu", oncontextmenu)
-        this.elements.forEach(element => {
+        this.elements.forEach(function(element) {
             element.addEventListener("contextmenu", oncontextmenu)
         })
     },
 
-    isMenuDisabledByDoubleTouch(){
+    isMenuDisabledByDoubleTouch: function(){
         return this.param().disableDoubleTouchMenu && !this.controlButton.isHidingButtons
     },
 
-    isControlButtonDisablingMenuByDoubleTouch(){
+    isControlButtonDisablingMenuByDoubleTouch: function(){
         return  (this.controlButton.isHidingButtons && !this.param().controlButton.enableDoubleTouchMenu) ||
                 this.controlButton.area.contains(TouchInput._x, TouchInput._y)
     },
 
-    isMovementDisabledByScreenTouch(){
+    isMovementDisabledByScreenTouch: function(){
         return this.param().disableScreenMove && !this.controlButton.isHidingButtons
     },
 
-    isControlButtonDisablingMovementByScreenTouch(){
+    isControlButtonDisablingMovementByScreenTouch: function(){
         return  (this.controlButton.isHidingButtons && !this.param().controlButton.enableScreenMove) || 
                 this.controlButton.area.contains(TouchInput._x, TouchInput._y)
     },
 
-    getDiv(){
+    getDiv: function(){
         return this.divContainer
     },
 
-    addToDiv(element){
-        this.getDiv().append(element)
+    addToDiv: function(element){
+        this.getDiv().appendChild(element)
     },
 
-    removeButtonsFromScene(){
-        const scene = SceneManager._scene.constructor.name
+    removeButtonsFromScene: function(){
+        var scene = SceneManager._scene.constructor.name
 
-        for(const button of this.buttonList){
+        for(var i = 0; i < this.buttonList.length; ++i){
+            var button = this.buttonList[i]
 
             if(button.canAddToScene(scene)){
                 button.removeFromScene()
@@ -1639,10 +1687,11 @@ Eli.MobileControls = {
         }
     },
 
-    addButtonsOnScene(){
-        const scene = SceneManager._scene.constructor.name
+    addButtonsOnScene: function(){
+        var scene = SceneManager._scene.constructor.name
 
-        for(const button of this.buttonList){
+        for(var i = 0; i < this.buttonList.length; ++i){
+            var button = this.buttonList[i]
 
             if(button.canAddToScene(scene)){
                 button.addOnScene()
@@ -1650,13 +1699,13 @@ Eli.MobileControls = {
         }
     },
 
-    canRefreshButtonsForScene(){
+    canRefreshButtonsForScene: function(){
         return  !this.controlButton.isHidingButtons &&
                 SceneManager._scene
     },
 
-    refreshButtonsForScene(){
-        const scene = SceneManager._scene.constructor.name
+    refreshButtonsForScene: function(){
+        var scene = SceneManager._scene.constructor.name
         
         if(this.param().controlButton.enable){
             if(this.controlButton.canAddToScene()) {
@@ -1667,7 +1716,8 @@ Eli.MobileControls = {
             
         }
         
-        for(const button of this.buttonList){
+        for(var i = 0; i < this.buttonList.length; ++i){
+            var button = this.buttonList[i]
 
             if(button.canAddToScene(scene)){
                 button.addOnScene()
@@ -1678,18 +1728,21 @@ Eli.MobileControls = {
         this.timeForRefresh = 0
     },
 
-    refreshKeyboardKeys(){
-        for(const button of Plugin.buttonList){
+    refreshKeyboardKeys: function(){
+        
+        for(var i = 0; i < Plugin.buttonList.length; ++i){
+            var button = Plugin.buttonList[i];
             if(button.setKeyboardKey && !button.keyboardKey){
                 button.setKeyboardKey()
             }
         }
     },
 
-    hideButtons(){
-        const scene = SceneManager._scene.constructor.name
+    hideButtons: function(){
+        var scene = SceneManager._scene.constructor.name
 
-        for(const button of this.buttonList){
+        for(var i = 0; i < this.buttonList.length; ++i){
+            var button = this.buttonList[i]
 
             if(button.canAddToScene(scene)){
                 button.hide()
@@ -1699,10 +1752,11 @@ Eli.MobileControls = {
         this.isHidingButtons = true
     },
 
-    showButtons(){
-        const scene = SceneManager._scene.constructor.name
+    showButtons: function(){
+        var scene = SceneManager._scene.constructor.name
 
-        for(const button of this.buttonList){
+        for(var i = 0; i < this.buttonList.length; ++i){
+            var button = this.buttonList[i]
 
             if(button.canAddToScene(scene)){
                 button.show()
@@ -1712,11 +1766,11 @@ Eli.MobileControls = {
         this.isHidingButtons = false
     },
 
-    getControlButton(){
+    getControlButton: function(){
         return this.controlButton
     },
 
-    isLandscape(){
+    isLandscape: function(){
         if(typeof screen.orientation === "undefined"){
             return window.innerHeight < window.innerWidth //detect landscape old style
         }else{
@@ -1724,38 +1778,41 @@ Eli.MobileControls = {
         }
     },
 
-    anyButtonAreaContains(x, y){
-        const allAreas = this.buttonList.map(item => item.area)
-
-        return allAreas.some(item => item.contains(x, y))
+    anyButtonAreaContains: function(x, y){
+        for (var i = 0; i < this.buttonList.length; i++) {
+            if (this.buttonList[i].area.contains(x, y)) {
+                return true;
+            }
+        }
+        return false;
     },
 
-    isMovingWithButtons(){
+    isMovingWithButtons: function(){
         return this.joystick.active || this.dpad.active;
     },
 
-    param(){
+    param: function(){
         return this.parameters;
     },
 
-    isAllowedOnDesktop(){
+    isAllowedOnDesktop: function(){
         return Utils.isNwjs() && this.parameters.allowedPlatforms.includes("Desktop");
     },
 
-    isAllowedOnMobile(){
+    isAllowedOnMobile: function(){
         return Utils.isMobileDevice() && this.parameters.allowedPlatforms.includes("Mobile");
     },
 
-    isAllowedOnWebBrowser(){
+    isAllowedOnWebBrowser: function(){
         return !Utils.isNwjs() && !Utils.isMobileDevice() && this.parameters.allowedPlatforms.includes("Web Browser");
     },
 
-    isMobileControlsAllowed(){
+    isMobileControlsAllowed: function(){
         return Utils.isOptionValid("test") || this.isAllowedOnDesktop() || this.isAllowedOnMobile() || this.isAllowedOnWebBrowser();
     },
 
     //refresh all buttons' touchable areas when the window is resized
-    updateOnResize() {
+    updateOnResize: function() {
 
         // joystick: new JoystickController(),
         // dpad: new DpadController(),
@@ -1767,7 +1824,8 @@ Eli.MobileControls = {
         //update controlButton separately; it's not in the button list, but the joysticks are.
         this.controlButton.updateOnResize();
 
-        for(const button of this.buttonList){
+        for(var i = 0; i < this.buttonList.length; ++i){
+            var button = this.buttonList[i]
             button.updateOnResize();
         }
 
@@ -1819,19 +1877,38 @@ Eli.KeyCodes = {
 
     defaultGamepad: [0, 1, 2, 3, 4, 5, 12, 13, 14, 15],
 
-    isDefaultKeyboard(keyCode){
+    isDefaultKeyboard: function(keyCode){
         return this.defaultKeyboard.includes(keyCode)
     },
 
-    isDefaultGamepad(keyCode){
+    isDefaultGamepad: function(keyCode){
         return this.defaultGamepad.includes(keyCode)
     },
 }
 
+//used to provide X and Y to the ClientRect objects from older web browsers.
+//I don't know if I should do it this way, or just edit the methods that need a DOMRect to use left and top.
+var standardizeRect = function(inputRect) {
+    if (typeof inputRect.x == "undefined") {
+        if(inputRect.width < 0) {
+            inputRect.x = inputRect.left - inputRect.width;
+        } else {
+            inputRect.x = inputRect.left;
+        }
+    }
+    if (typeof inputRect.y == "undefined") {
+        if(inputRect.height < 0) {
+            inputRect.y = inputRect.top - inputRect.height;
+        } else {
+            inputRect.y = inputRect.top;
+        }
+    }
 
+    return inputRect;
+}
 
-const Plugin = Eli.MobileControls
-const Alias = Eli.MobileControls.alias
+var Plugin = Eli.MobileControls
+var Alias = Eli.MobileControls.alias
 
 Plugin.initialize()
 
@@ -1969,7 +2046,7 @@ Scene_Map.prototype.isMenuCalled = function() {
 }
 
 Scene_Map.prototype.isMenuDisabledByMobileControls = function() {
-    const isMobileDisabling = Plugin.isMenuDisabledByDoubleTouch() || Plugin.isControlButtonDisablingMenuByDoubleTouch()
+    var isMobileDisabling = Plugin.isMenuDisabledByDoubleTouch() || Plugin.isControlButtonDisablingMenuByDoubleTouch()
     return isMobileDisabling && TouchInput.isCancelled()
 }
 

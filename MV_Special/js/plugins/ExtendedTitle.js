@@ -103,7 +103,7 @@ Scene_Title.prototype.commandGuide = function() {
     this._commandWindow.close();
     SceneManager.push(Scene_Guide);
 
-   // console.log("Guide");
+    // console.log("Guide");
 
 };
 
@@ -556,7 +556,7 @@ Scene_PostMessage.prototype.onInputOk = function() {
     outgoing = this._editWindow.name() + "\n";
 
 
-    fetch(`/printer`, {
+    fetch("/printer", {
         method: "POST",
         // headers: {
         //     "Content-Type": "application/json",

@@ -13,26 +13,30 @@ var lang_str = "3";
 
 
 //fake call hooks for the steam user status API. I'll leave the calls in the program in case I want to add that back.
-class SteamUserStatsLite {
-
-    constructor() {
-
-    }
-
-    static instance() {
-        return sssl;
-    }
-
-    set_achievement(input) {
-        console.log("Steam Set ACH: " + input);
-    } 
-
-    update() {
-        console.log("Steam Update Called.");
-    }
-
+//I could make those in-program calls a little bit nicer, but I'm too lazy to.
+function SteamUserStatsLite() {
+    this.initialize.apply(this, arguments);
 }
-const sssl = new SteamUserStatsLite();
+
+SteamUserStatsLite.prototype.initialize = function() {
+    //nothing for now
+}
+
+SteamUserStatsLite.prototype.instance = function() {
+    return sssl;
+}
+SteamUserStatsLite.instance = function() {
+    return sssl;
+}
+
+SteamUserStatsLite.prototype.set_achievement = function(input) {
+    console.log("Steam Set ACH: " + input);
+}
+
+SteamUserStatsLite.prototype.update = function() {
+    console.log("Steam Update Called.");
+}
+var sssl = new SteamUserStatsLite();
 
 
 //rpg_object.js, retrofitting modified methods 
@@ -889,6 +893,17 @@ Game_Event.prototype.start = function() {
 
 
 
+SceneManager.initAudio = function() {
+    var noAudio = Utils.isOptionValid('noaudio');
+    if (!WebAudio.initialize(noAudio) && !noAudio) {
+        console.warn("Your browser does not support Web Audio API! Attempting to continue without...");
+
+        //no need to try again.
+        //if(!WebAudio.initialize(true)) {
+        //    throw new Error('Could init initialize WebAudio module!');   
+        //}        
+    }
+};
 
 ///////////////////////////Temp Tests go below
 
@@ -1132,5 +1147,5 @@ Game_CharacterBase.prototype.screenY = function() {
 //     }
 // };
 
-
-
+//////////////////////POLYFILLS//////////////////////
+//moved to Polyfills.js so I can load it before I load anything else.
