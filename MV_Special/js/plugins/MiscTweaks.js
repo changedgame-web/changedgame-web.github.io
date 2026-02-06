@@ -893,7 +893,7 @@ Game_Event.prototype.start = function() {
 };
 
 
-
+//no longer quits if the audio backend fails
 SceneManager.initAudio = function() {
     var noAudio = Utils.isOptionValid('noaudio');
     if (!WebAudio.initialize(noAudio) && !noAudio) {
@@ -905,6 +905,25 @@ SceneManager.initAudio = function() {
         //}        
     }
 };
+
+//no longer quits if the font fails to load
+Scene_Boot.prototype.isGameFontLoaded = function() {
+    if (Graphics.isFontLoaded('GameFont')) {
+        return true;
+    } else if (!Graphics.canUseCssFontLoading()){
+        var elapsed = Date.now() - this._startDate;
+
+        //forces the user to wait for 60000 milliseconds, which seems like a bit.
+        //unfortunately, I can't find a good way to see if the font returned an error or not.
+        //so waiting it is I guess.
+        if (elapsed >= 60000) {
+            console.warn("Failed to load font! Using builtin font. Things may be formatted incorrectly.")
+            //throw new Error('Failed to load GameFont');
+            return true;
+        }
+    }
+};
+
 
 ///////////////////////////Temp Tests go below
 

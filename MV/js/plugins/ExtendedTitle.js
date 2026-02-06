@@ -23,6 +23,7 @@ Window_TitleCommand.prototype.makeCommandList = function() {
     var s4 = "Language";
     var s5 = "Changed-Special";
     var s6 = "Guide";
+    var s7 = "Print Message";
 
     //SceneManager.exit();
 
@@ -86,6 +87,9 @@ Window_TitleCommand.prototype.makeCommandList = function() {
 
     this.addCommand(s6,   'guide');
 
+    //convention special. This does nothing if you try to use it on a static http server.
+    //this.addCommand(s7, 'message');
+
 };
 
 Window_TitleCommand.prototype.updatePlacement = function() {
@@ -105,6 +109,13 @@ Scene_Title.prototype.commandGuide = function() {
 
     // console.log("Guide");
 
+};
+
+Scene_Title.prototype.commandMessage = function() {
+    this._commandWindow.close();
+    
+    //convention special
+    SceneManager.push(Scene_PostMessage);
 };
 
 Scene_Title.prototype.commandDlc = function() {
@@ -145,6 +156,7 @@ Scene_Title.prototype.createCommandWindow = function() {
     this._commandWindow.setHandler('lang',  this.commandLang.bind(this));
     this._commandWindow.setHandler('quit',  this.commandQuit.bind(this));
 
+    this._commandWindow.setHandler('message',  this.commandMessage.bind(this));
 
     this.addWindow(this._commandWindow);
 
@@ -555,18 +567,10 @@ Scene_PostMessage.prototype.onInputOk = function() {
     //this._actor.setName(this._editWindow.name());
     outgoing = this._editWindow.name() + "\n";
 
-
-    fetch("/printer", {
-        method: "POST",
-        // headers: {
-        //     "Content-Type": "application/json",
-        //     "Content-Length": outgoing.length
-        // },
-        body: JSON.stringify({ text: outgoing })
-    })
-    //.then(response => response.json())
-    //.then(data => console.log(data));
-    
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "/printer", true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(JSON.stringify({ text: outgoing }));
 
     
     this.popScene();

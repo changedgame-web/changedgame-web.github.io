@@ -111,6 +111,7 @@ if (!Array.prototype.fill) {
   };
 }
 
+//Function.bind polyfill
 if (!Function.prototype.bind) {
   Function.prototype.bind = function (oThis) {
     if (typeof this !== "function") {
@@ -129,3 +130,9 @@ if (!Function.prototype.bind) {
   };
 }
 
+//math.trunc polyfill
+if (!Math.trunc) {
+  Math.trunc = function (x) {
+    return x < 0 ? Math.ceil(x) : Math.floor(x);
+  };
+}
