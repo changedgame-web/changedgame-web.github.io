@@ -86,10 +86,16 @@ https://docs.google.com/document/d/1jCGESiSowTvgLrF3EGGwuVsOcbxwlqXe_LE84idhINE/
 @parent fixButtonSize
 
 @param controlButton
-@text Control Buttons
+@text Control Button
 @type struct<controlButtonST>
 @desc A button that can hide/show all buttons.
 @default {"enable":"false","img":"","width":"5","horizontalOrientation":"left","padX":"2","verticalOrientation":"top","padY":"2","vibration":"0","enableScreenMove":"true","enableDoubleTouchMenu":"true"}
+
+@param exitButton
+@text Exit Button
+@type struct<exitButtonST>
+@desc A button that resets the game back to the title.
+@default {"enable":"false","img":"","width":"5","horizontalOrientation":"left","padX":"2","verticalOrientation":"top","padY":"2","vibration":"0"}
 
 @param buttons
 @text Regular Buttons
@@ -448,6 +454,70 @@ It is case sensitive.
 @type boolean
 @desc Set to true if you want to enable menu call with double touch when hiding the controls.
 @default true
+
+*/
+    
+}
+
+/* ----------------------------- EXIT BUTTON ----------------------------- */
+{
+
+/*~struct~exitButtonST:
+
+@param enable
+@text Enable Exit Button
+@type boolean
+@desc Set true to use this button.
+@default true
+
+@param img
+@text Image
+@type file
+@dir img/screen_controls
+@desc The image used for the button.
+@default 
+
+@param width
+@text Size
+@type number
+@desc Set the size according to px.
+@default 5
+
+@param horizontalOrientation
+@text Horizontal Position
+@type select
+@option left
+@option right
+@desc The orientation of the image. If left, the Pad X will push it right. Otherwise, will push it left.
+@default left
+
+@param padX
+@text Padding X
+@type number
+@desc The distance in % that the image will be from the horizontal border of the screen.
+@default 2
+@parent horizontalOrientation
+
+@param verticalOrientation
+@text Vertical Position
+@type select
+@option bottom
+@option top
+@desc The orientation of the image. If bottom, the Pad Y will push it up. Otherwise, will push it down.
+@default top
+
+@param padY
+@text Padding Y
+@type number
+@desc The distance in % that the image will be from the vertical border of the screen.
+@default 2
+@parent verticalOrientation
+
+@param vibration
+@text Vibration
+@type number
+@desc The vibration in miliseconds. Leave it 0 for no vibration.
+@default 0
 
 */
     
@@ -873,7 +943,7 @@ ControlButton.prototype.constructor = ControlButton;
     ControlButton.prototype.setKeyboardKey = function(){}
 
     ControlButton.prototype.setInput = function(){
-        if($gameMessage.isBusy()) return
+        //if($gameMessage.isBusy()) return
 
         if(this.isHidingButtons){
             Plugin.addButtonsOnScene()
@@ -893,6 +963,49 @@ ControlButton.prototype.constructor = ControlButton;
         }        
         return true
     }
+
+/* ----------------------------- EXIT BUTTON ----------------------------- */
+
+function ExitButton() {
+    RegularButton.call(this)
+    this.parameters = {
+        enable: false,
+        horizontalOrientation: "",
+        img: "",
+        padX: 0,
+        padY: 0,
+        verticalOrientation: "",
+        vibrate: 0,
+        width: 0,
+    }
+}
+
+ExitButton.prototype = Object.create(RegularButton.prototype);
+ExitButton.prototype.constructor = ExitButton;
+
+
+ExitButton.prototype.initMembers = function(){
+    RegularButton.prototype.initMembers.call(this)
+    this.isHidingButtons = false
+}
+
+ExitButton.prototype.setKeyboardKey = function(){}
+
+ExitButton.prototype.setInput = function(){
+    //go to title screen
+    SceneManager.goto(Scene_Title);
+}
+
+ExitButton.prototype.resetInput = function(){}
+
+ExitButton.prototype.canAddToScene = function(sceneName){
+    //if showOnscreenControls exists and is false, then automatically return false
+    if(ConfigManager != null && ConfigManager.showOnscreenControls != null && ConfigManager.showOnscreenControls == false) {
+        return false;
+    }
+    return true
+}
+
 
 
 /* ------------------------------- SINGLE DPAD ------------------------------ */
@@ -1461,6 +1574,7 @@ function Parameters(parameters) {
     this.fixButtonInterval = Math.max(Number(parameters.fixButtonInterval || "120"), 1)
     this.dPadType = parameters.dPadType
     this.controlButton = this.parseControlButtonParameters(parameters.controlButton)
+    this.exitButton = this.parseExitButtonParameters(parameters.exitButton);
     this.joystickPad = this.parseJoystickParameters(parameters.joystickPad)
     this.singlePad = this.parseSinglePadParameters(parameters.singlePad)
     this.buttons = this.parseRegularButtonParameters(parameters.buttons)
@@ -1481,6 +1595,21 @@ function Parameters(parameters) {
             width: Number(param.width),
             enableScreenMove: param.enableScreenMove === "true",
             enableDoubleTouchMenu: param.enableDoubleTouchMenu === "true",
+        }
+    }
+
+    Parameters.prototype.parseExitButtonParameters = function(rawParam){
+        var param = JSON.parse(rawParam)
+
+        return {
+            enable: param.enable === "true",
+            horizontalOrientation: param.horizontalOrientation,
+            img: param.img,
+            padX: Number(param.padX),
+            padY: Number(param.padY),
+            verticalOrientation: "",
+            vibration: Number(param.vibration),
+            width: Number(param.width),
         }
     }
 
@@ -1552,6 +1681,7 @@ Eli.MobileControls = {
     BaseButton: BaseButton,
     RegularButton: RegularButton,
     ControlButton: ControlButton,
+    ExitButton: ExitButton,
     JoystickController: JoystickController,
     DpadController: DpadController,
     parameters: new Parameters(PluginManager.parameters("EliMZ_MobileControls")),
@@ -1560,6 +1690,7 @@ Eli.MobileControls = {
     joystick: new JoystickController(),
     dpad: new DpadController(),
     controlButton: new ControlButton(),
+    exitButton: new ExitButton(),
     buttonList: [],
     timeForRefresh: 0,
     isHidingButtons: false,
@@ -1581,6 +1712,10 @@ Eli.MobileControls = {
 
         if(this.param().controlButton.enable){
             this.createControlButton();
+        }
+
+        if(this.param().exitButton.enable){
+            this.createExitButton();
         }
 
         this.disableContextMenu()
@@ -1636,6 +1771,11 @@ Eli.MobileControls = {
     createControlButton: function(){   
         this.controlButton.initialize(this.param().controlButton)
         this.addToDiv(this.controlButton.divs[0]) 
+    },
+
+    createExitButton: function() {
+        this.exitButton.initialize(this.param().exitButton)
+        this.addToDiv(this.exitButton.divs[0]) 
     },
 
     disableContextMenu: function(){
@@ -1715,6 +1855,14 @@ Eli.MobileControls = {
             }
             
         }
+
+        if(this.param().exitButton.enable){
+            if(this.exitButton.canAddToScene()) {
+                this.exitButton.divs[0].style.visibility = "visible";
+            } else {
+                this.exitButton.divs[0].style.visibility = "hidden";
+            }
+        }
         
         for(var i = 0; i < this.buttonList.length; ++i){
             var button = this.buttonList[i]
@@ -1770,6 +1918,10 @@ Eli.MobileControls = {
         return this.controlButton
     },
 
+    getExitButton: function() {
+        return this.exitButton;
+    },
+
     isLandscape: function(){
         if(typeof screen.orientation === "undefined"){
             return window.innerHeight < window.innerWidth //detect landscape old style
@@ -1823,6 +1975,7 @@ Eli.MobileControls = {
 
         //update controlButton separately; it's not in the button list, but the joysticks are.
         this.controlButton.updateOnResize();
+        this.exitButton.updateOnResize();
 
         for(var i = 0; i < this.buttonList.length; ++i){
             var button = this.buttonList[i]

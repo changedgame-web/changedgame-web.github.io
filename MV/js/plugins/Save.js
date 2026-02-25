@@ -187,7 +187,9 @@ Window_SaveInfo.prototype.showSaveInfo = function(index) {
     //var sParsed = JSON.parse(json);
     var context = this;
     var game_name = $dataSystem.gameTitle;
-    var imageID = game_name + "_" + id + "_thumbnail";
+    //oops! we already use the game_name with StorageManager.webStorageKey in our s/l methods.
+    //var imageID = game_name + "_" + id + "_thumbnail";
+    var imageID = "" + id + "_thumbnail";
 
     //async image load
     StorageManager.loadAlt(imageID, function(screenshot) {
@@ -699,7 +701,7 @@ DataManager.saveGameWithoutRescue = function(savefileId) {
 
     //save image
     var game_name = $dataSystem.gameTitle;
-    var imageID = game_name + "_" + savefileId + "_thumbnail";
+    var imageID = "" + savefileId + "_thumbnail";
     StorageManager.saveAlt(imageID, $gameScreenshot);
 
     return true;

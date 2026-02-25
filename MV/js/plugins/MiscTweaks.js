@@ -7,10 +7,6 @@
 var lang_filename = "lang.txt";
 var lang_str = "3";
 
-(function() {
-
-})();
-
 
 //fake call hooks for the steam user status API. I'll leave the calls in the program in case I want to add that back.
 //I could make those in-program calls a little bit nicer, but I'm too lazy to.
@@ -555,24 +551,6 @@ Game_Temp.prototype.initialize = function() {
 };
 
 
-//load language preferences on start. The file only needs to be reloaded when we change languages in Scene_Lang
-(function(){
-
-    //check if file exists and make it if it doesn't, putting in a default of 1
-    
-    //this is the only place where the file might not exist,
-    //so other than the language selection section itself, no other writes to the filesystem need to be made
-    if(StorageManager.exists(lang_filename)) {
-        lang_str = StorageManager.load(lang_filename);
-    } else {
-        //file doesn't exist yet, default language to our hard-coded fallback
-        StorageManager.save(lang_filename, lang_str);
-    }
-
-})();
-
-
-
 //////////////////////////////////////////////////
 //Main.rb
 //////////////////////////////////////////////////
@@ -670,10 +648,39 @@ StorageManager.webStorageKey = function(savefileId) {
         return 'RPG Config';
     } else if (savefileId === 0) {
         return game_name + '_RPG Global';
-    } else {
+    } else if (savefileId == lang_filename) {
+        //special condition: language is not filtered by game_name.
+        //this is because language needs to be loaded before game_name is determined (the value of language determines game_name)
+        //we might need to use something other than game_name to determine what save files belong where... maybe add it ourselves if we can't find anything valid in the files
+        //(because doing it off game_name raises the possibility of having different saves for each language, which I'm not sure we want)
+        return 'RPG File%1'.format(savefileId);
+    } 
+    else {
         return game_name + '_RPG File%1'.format(savefileId);
     }
 };
+
+
+//load language preferences on start. The file only needs to be reloaded when we change languages in Scene_Lang
+//needs to run after all our overrides
+(function(){
+
+    //problem:
+    //we try to load and append the game's title to the savefile when we save and load the langfile,
+    //bur when we load it, we haven't loaded the game's title yet (which varies depending on the data we're using, so we can't know until we load it)
+    //which means we need to add an exception to the loading routine to not append the game name to the langfile, but *only* the langfile
+    
+    //this is the only place where the file might not exist,
+    //so other than the language selection section itself, no other writes to the filesystem need to be made
+    if(StorageManager.exists(lang_filename)) {
+        lang_str = StorageManager.load(lang_filename);
+    } else {
+        //file doesn't exist yet, default language to our hard-coded fallback
+        StorageManager.save(lang_filename, lang_str);
+    }
+
+})();
+
 
 
 //////////////////////////////////////////////////
@@ -924,17 +931,6 @@ Scene_Boot.prototype.isGameFontLoaded = function() {
 };
 
 
-///////////////////////////Temp Tests go below
-
-//not needed as I'm done with the convention for now.
-// // from rpg_core.js, temp. modification for convention showcase. I forgot to put it in plugins! silly me.
-// Graphics._makeErrorHtml = function(name, message) {
-//     return ('<font color="yellow"><b>' + name + '</b></font><br>' +
-//             '<font color="white">' + message + '</font><br>' + 
-//             '<font color="yellow">' + 'Try the remote version: https://changedgame-web.github.io' + '</font><br>' );
-// };
-
-
 //See if we can eliminate those bulk warnings we seem to be getting
 Bitmap.prototype.drawText = function(text, x, y, maxWidth, lineHeight, align) {
     // Note: Firefox has a bug with textBaseline: Bug 737852
@@ -967,6 +963,21 @@ Bitmap.prototype.drawText = function(text, x, y, maxWidth, lineHeight, align) {
         this._setDirty();
     }
 };
+
+
+
+
+
+///////////////////////////Temp Tests go below
+
+//not needed as I'm done with the convention for now.
+// // from rpg_core.js, temp. modification for convention showcase. I forgot to put it in plugins! silly me.
+// Graphics._makeErrorHtml = function(name, message) {
+//     return ('<font color="yellow"><b>' + name + '</b></font><br>' +
+//             '<font color="white">' + message + '</font><br>' + 
+//             '<font color="yellow">' + 'Try the remote version: https://changedgame-web.github.io' + '</font><br>' );
+// };
+
 
 
 
